@@ -19,7 +19,7 @@ function logout() {
         {{ user?.email }} no tiene permisos de administrador de plataforma sobre ninguna
         aplicación todavía. Pedile a quien ya tenga acceso que te agregue.
       </p>
-      <UButton color="neutral" variant="outline" @click="logout">Cerrar sesión</UButton>
+      <UButton color="primary" variant="outline" @click="logout">Cerrar sesión</UButton>
     </div>
   </div>
 </template>

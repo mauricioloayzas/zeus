@@ -118,7 +118,7 @@ async function toggleStatus(p: Plan) {
         <h1 class="text-xl font-semibold text-gray-900">Planes</h1>
         <p class="text-sm text-gray-500">Planes de suscripción de {{ activeOrigin?.application?.name ?? '—' }}</p>
       </div>
-      <UButton color="neutral" icon="i-heroicons-plus" :disabled="!applicationId" @click="openCreate">Nuevo plan</UButton>
+      <UButton color="primary" icon="i-heroicons-plus" :disabled="!applicationId" @click="openCreate">Nuevo plan</UButton>
     </div>
 
     <p v-if="!applicationId" class="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4">
@@ -181,7 +181,7 @@ async function toggleStatus(p: Plan) {
               <UInput v-model.number="form.price" type="number" step="0.01" min="0" required size="lg" class="w-full" />
             </UFormField>
           </div>
-          <UButton type="submit" color="neutral" block size="lg" :loading="saving">
+          <UButton type="submit" color="primary" block size="lg" :loading="saving">
             {{ editing ? 'Guardar cambios' : 'Crear plan' }}
           </UButton>
         </form>

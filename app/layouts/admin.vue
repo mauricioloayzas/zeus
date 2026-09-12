@@ -12,17 +12,24 @@ const sidebarOpen = ref(false)
 
 watch(() => route.path, () => { sidebarOpen.value = false })
 
+// Aplicaciones/Perfiles/Planes son de plataforma (no cambian con la app elegida en el
+// dropdown, salvo Perfiles/Planes que sí filtran por ella dentro de cada página).
 const ownerLinks = [
   { label: 'Aplicaciones', icon: 'i-heroicons-squares-2x2', slug: 'aplicaciones' },
   { label: 'Perfiles', icon: 'i-heroicons-user-group', slug: 'perfiles' },
-  { label: 'Configuración', icon: 'i-heroicons-cog-6-tooth', slug: 'configuracion' },
   { label: 'Planes', icon: 'i-heroicons-tag', slug: 'planes' },
 ]
+// Documentos electrónicos y Contabilidad: mismo criterio que caja-registradora (secciones
+// separadas), visibles para cualquiera con acceso a origin — no solo Owner.
 const sharedLinks = [
   { label: 'Suscripciones', icon: 'i-heroicons-credit-card', slug: 'suscripciones' },
+  { label: 'Documentos electrónicos', icon: 'i-heroicons-document-text', slug: 'documentos' },
   { label: 'Contabilidad', icon: 'i-heroicons-calculator', slug: 'contabilidad' },
 ]
+// Configuración SRI y WhatsApp son del perfil origin en sí, no de una app puntual — son
+// iguales sin importar qué aplicación esté elegida en el dropdown de la derecha.
 const ownerOnlyExtra = [
+  { label: 'Configuración', icon: 'i-heroicons-cog-6-tooth', slug: 'configuracion' },
   { label: 'WhatsApp', icon: 'i-heroicons-chat-bubble-left-right', slug: 'whatsapp' },
 ]
 
@@ -31,10 +38,14 @@ const navLinks = computed(() => {
   return links.map((l) => ({ ...l, to: `/${urlName.value}/${l.slug}` }))
 })
 
-const originItems = computed(() => [
+// El dropdown de la derecha elige APLICACIÓN (Clichín, Hayayaku...), no perfil — el perfil
+// "origin" detrás casi siempre es el mismo (compartido entre apps), lo que cambia es contra
+// qué application_id se filtran Perfiles/Planes/Suscripciones. Configuración y WhatsApp no
+// dependen de esto: son del perfil origin en sí, iguales para cualquier app elegida acá.
+const applicationItems = computed(() => [
   origins.value.map((o) => ({
-    label: o.application ? `${o.profile.name} — ${o.application.name}` : o.profile.name,
-    icon: o.profile.url_name === urlName.value ? 'i-heroicons-check' : 'i-heroicons-building-office-2',
+    label: o.application?.name ?? o.profile.name,
+    icon: o.application?.id === activeOrigin.value?.application?.id ? 'i-heroicons-check' : 'i-heroicons-squares-2x2',
     onSelect: () => {
       setActiveOrigin(o)
       router.push(`/${o.profile.url_name}/${isOwner.value ? 'aplicaciones' : 'suscripciones'}`)
@@ -68,11 +79,11 @@ async function logout() {
     >
       <div class="p-6 border-b border-gray-200">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center shrink-0">
+          <div class="w-10 h-10 rounded-xl bg-mauloasan-dark flex items-center justify-center shrink-0">
             <UIcon name="i-heroicons-bolt" class="text-white text-xl" />
           </div>
           <div>
-            <h1 class="font-bold text-gray-900 text-sm">Zeus</h1>
+            <h1 class="font-bold text-mauloasan-dark text-sm">Zeus</h1>
             <p class="text-xs text-gray-500">Administración de plataforma</p>
           </div>
         </div>
@@ -83,8 +94,8 @@ async function logout() {
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
-          active-class="bg-gray-900 text-white hover:bg-gray-900 hover:text-white"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-mauloasan-dark transition-colors"
+          active-class="bg-brand-500 text-white hover:bg-brand-500 hover:text-white"
           @click="sidebarOpen = false"
         >
           <UIcon :name="link.icon" class="text-lg shrink-0" />
@@ -94,9 +105,9 @@ async function logout() {
 
       <div class="p-4 border-t border-gray-200">
         <div class="flex items-center gap-3 mb-3 px-3">
-          <UAvatar :alt="user?.name || user?.email" size="sm" class="bg-gray-900 text-white" />
+          <UAvatar :alt="user?.name || user?.email" size="sm" class="bg-mauloasan-dark text-white" />
           <div class="min-w-0">
-            <p class="text-xs font-medium text-gray-900 truncate">{{ user?.name || 'Usuario' }}</p>
+            <p class="text-xs font-medium text-mauloasan-dark truncate">{{ user?.name || 'Usuario' }}</p>
             <p class="text-xs text-gray-500 truncate">{{ user?.email }}</p>
           </div>
         </div>
@@ -124,16 +135,15 @@ async function logout() {
           @click="sidebarOpen = true"
         />
         <div class="flex-1 flex justify-end">
-          <UDropdownMenu v-if="activeOrigin" :items="originItems" :content="{ align: 'end' }">
+          <UDropdownMenu v-if="activeOrigin" :items="applicationItems" :content="{ align: 'end' }">
             <UButton
               variant="ghost"
-              color="neutral"
-              icon="i-heroicons-building-office-2"
+              color="primary"
+              icon="i-heroicons-squares-2x2"
               trailing-icon="i-heroicons-chevron-down"
               size="sm"
             >
-              {{ activeOrigin.profile.name }}
-              <template v-if="activeOrigin.application"> — {{ activeOrigin.application.name }}</template>
+              {{ activeOrigin.application?.name ?? activeOrigin.profile.name }}
             </UButton>
           </UDropdownMenu>
         </div>

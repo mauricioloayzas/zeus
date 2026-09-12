@@ -1,2 +1,25 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/*
+ * Colores de marca Mauloasan: naranja de acento (#FF914D, escala completa "brand" para que
+ * Nuxt UI la use como color primario en botones/focus/links) + el oscuro de marca (#282828,
+ * como color plano, para superficies de marca puntuales como el sidebar/logo — no reemplaza
+ * la escala "neutral" de Nuxt UI, que sigue siendo gris real para texto/bordes/chrome general).
+ */
+@theme {
+  --color-brand-50: #fff6f0;
+  --color-brand-100: #ffece0;
+  --color-brand-200: #ffd9c2;
+  --color-brand-300: #ffba8f;
+  --color-brand-400: #ff9452;
+  --color-brand-500: #ff914d;
+  --color-brand-600: #ff711a;
+  --color-brand-700: #e65800;
+  --color-brand-800: #b34400;
+  --color-brand-900: #8a3500;
+  --color-brand-950: #662700;
+
+  --color-mauloasan-dark: #282828;
+  --color-mauloasan-orange: #ff914d;
+}

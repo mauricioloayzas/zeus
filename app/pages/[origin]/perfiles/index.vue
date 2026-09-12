@@ -126,7 +126,7 @@ async function toggleStatus(p: Profile) {
         <h1 class="text-xl font-semibold text-gray-900">Perfiles</h1>
         <p class="text-sm text-gray-500">Empresas, personas y contadores de {{ activeOrigin?.application?.name ?? activeOrigin?.profile.name }}</p>
       </div>
-      <UButton color="neutral" icon="i-heroicons-plus" @click="openCreate">Nuevo perfil</UButton>
+      <UButton color="primary" icon="i-heroicons-plus" @click="openCreate">Nuevo perfil</UButton>
     </div>
 
     <div v-if="loading" class="flex justify-center py-16">
@@ -183,7 +183,7 @@ async function toggleStatus(p: Profile) {
           <p v-if="!editing" class="text-xs text-gray-400">
             País y moneda se heredan de {{ activeOrigin?.profile.name }} si no se especifican.
           </p>
-          <UButton type="submit" color="neutral" block size="lg" :loading="saving">
+          <UButton type="submit" color="primary" block size="lg" :loading="saving">
             {{ editing ? 'Guardar cambios' : 'Crear perfil' }}
           </UButton>
         </form>

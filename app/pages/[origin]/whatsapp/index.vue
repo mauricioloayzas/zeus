@@ -1,53 +1,27 @@
 <script setup lang="ts">
-import type { Profile, WhatsAppAccount, WhatsAppTemplate, WhatsAppTemplateForm } from '~/types'
+import type { WhatsAppAccount, WhatsAppTemplate, WhatsAppTemplateForm } from '~/types'
 
 definePageMeta({ layout: 'admin' })
 
+// Solo para el perfil origin: cualquier otro perfil de Clichín/Hayayaku ya puede configurar
+// su propio WhatsApp desde su propio frontend — no hace falta duplicarlo acá.
 const { activeOrigin } = useZeusContext()
-const { list: listProfiles } = useProfiles()
 const { getAccount, disconnect, listTemplates, createTemplate, deleteTemplate, testTemplate } = useWhatsApp()
 const toast = useToast()
 
-const allProfiles = ref<Profile[]>([])
-const selectedProfileId = ref<string>('')
-
-// Mismo criterio de "pertenece a esta app" que perfiles/index.vue — acá se incluye también
-// el propio origin, porque origin también puede tener su propio WhatsApp Business.
-function belongsToActiveOrigin(profile: Profile, byId: Map<string, Profile>): boolean {
-  if (profile.id === activeOrigin.value?.profile.id) return true
-  let current: Profile | undefined = profile
-  for (let i = 0; i < 5 && current; i++) {
-    if (current.parent_id === activeOrigin.value?.profile.id) return true
-    current = current.parent_id ? byId.get(current.parent_id) : undefined
-  }
-  return false
-}
-
-const profileOptions = computed(() => {
-  const byId = new Map(allProfiles.value.map((p) => [p.id, p]))
-  return allProfiles.value
-    .filter((p) => belongsToActiveOrigin(p, byId))
-    .map((p) => ({ label: p.name, value: p.id }))
-})
+const profileId = computed(() => activeOrigin.value?.profile.id ?? '')
 
 const account = ref<WhatsAppAccount | null>(null)
 const templates = ref<WhatsAppTemplate[]>([])
-const loading = ref(false)
-
-async function loadProfiles() {
-  allProfiles.value = await listProfiles().catch(() => [])
-  if (activeOrigin.value) selectedProfileId.value = activeOrigin.value.profile.id
-}
-onMounted(loadProfiles)
-watch(() => activeOrigin.value?.profile.id, loadProfiles)
+const loading = ref(true)
 
 async function load() {
-  if (!selectedProfileId.value) return
+  if (!profileId.value) return
   loading.value = true
   try {
     const [acc, tpls] = await Promise.all([
-      getAccount(selectedProfileId.value),
-      listTemplates(selectedProfileId.value),
+      getAccount(profileId.value),
+      listTemplates(profileId.value),
     ])
     account.value = acc
     templates.value = tpls
@@ -57,13 +31,14 @@ async function load() {
     loading.value = false
   }
 }
-watch(selectedProfileId, load, { immediate: true })
+onMounted(load)
+watch(profileId, load)
 
 async function handleDisconnect() {
-  if (!selectedProfileId.value) return
-  if (!confirm('¿Desconectar el número de WhatsApp de este perfil?')) return
+  if (!profileId.value) return
+  if (!confirm('¿Desconectar el número de WhatsApp de origin?')) return
   try {
-    await disconnect(selectedProfileId.value)
+    await disconnect(profileId.value)
     toast.add({ title: 'Número desconectado', color: 'success' })
     await load()
   } catch (e: unknown) {
@@ -87,10 +62,10 @@ function openCreate() {
 }
 
 async function submitTemplate() {
-  if (!selectedProfileId.value) return
+  if (!profileId.value) return
   saving.value = true
   try {
-    await createTemplate(selectedProfileId.value, form)
+    await createTemplate(profileId.value, form)
     toast.add({ title: 'Plantilla enviada a revisión de Meta', color: 'success' })
     showModal.value = false
     await load()
@@ -102,10 +77,10 @@ async function submitTemplate() {
 }
 
 async function handleDeleteTemplate(t: WhatsAppTemplate) {
-  if (!selectedProfileId.value) return
+  if (!profileId.value) return
   if (!confirm(`¿Eliminar la plantilla "${t.name}"?`)) return
   try {
-    await deleteTemplate(selectedProfileId.value, t.id)
+    await deleteTemplate(profileId.value, t.id)
     toast.add({ title: 'Plantilla eliminada', color: 'success' })
     await load()
   } catch (e: unknown) {
@@ -115,9 +90,9 @@ async function handleDeleteTemplate(t: WhatsAppTemplate) {
 
 const testTo = ref('')
 async function handleTest(t: WhatsAppTemplate) {
-  if (!selectedProfileId.value || !testTo.value) return
+  if (!profileId.value || !testTo.value) return
   try {
-    await testTemplate(selectedProfileId.value, t.id, testTo.value)
+    await testTemplate(profileId.value, t.id, testTo.value)
     toast.add({ title: 'Mensaje de prueba enviado', color: 'success' })
   } catch (e: unknown) {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
@@ -135,26 +110,22 @@ function templateStatusColor(status: string) {
 <template>
   <div class="max-w-3xl mx-auto py-8 px-4 space-y-6">
     <div>
-      <h1 class="text-xl font-semibold text-gray-900">WhatsApp</h1>
-      <p class="text-sm text-gray-500">Configurá el número y las plantillas de cualquier perfil de la aplicación</p>
+      <h1 class="text-xl font-semibold text-mauloasan-dark">WhatsApp</h1>
+      <p class="text-sm text-gray-500">Número y plantillas de {{ activeOrigin?.profile.name }} — es igual para todas las aplicaciones</p>
     </div>
-
-    <UFormField label="Perfil" name="profile" class="max-w-sm">
-      <USelectMenu v-model="selectedProfileId" :items="profileOptions" value-key="value" size="lg" class="w-full" />
-    </UFormField>
 
     <div v-if="loading" class="flex justify-center py-16">
       <UIcon name="i-heroicons-arrow-path" class="animate-spin text-3xl text-gray-400" />
     </div>
 
-    <template v-else-if="selectedProfileId">
+    <template v-else>
       <UCard>
         <template #header>
           <h2 class="font-semibold text-gray-800">Número conectado</h2>
         </template>
         <div v-if="!account" class="text-sm text-gray-400 py-2">
-          Este perfil todavía no conectó ningún número de WhatsApp. La conexión inicial
-          (Embedded Signup de Meta) se hace desde el propio perfil, en caja-registradora.
+          Todavía no hay ningún número conectado. La conexión inicial (Embedded Signup de
+          Meta) se hace desde caja-registradora, no desde acá.
         </div>
         <div v-else class="flex items-center justify-between">
           <div>
@@ -170,7 +141,7 @@ function templateStatusColor(status: string) {
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-800">Plantillas</h2>
-            <UButton size="sm" color="neutral" icon="i-heroicons-plus" :disabled="!account" @click="openCreate">Nueva</UButton>
+            <UButton size="sm" color="primary" icon="i-heroicons-plus" :disabled="!account" @click="openCreate">Nueva</UButton>
           </div>
         </template>
         <div v-if="!account" class="text-sm text-gray-400 py-2">Conectá un número primero para poder crear plantillas.</div>
@@ -212,7 +183,7 @@ function templateStatusColor(status: string) {
           <UFormField label="Texto" name="body_text" help="Usá {{1}}, {{2}}... para variables">
             <UTextarea v-model="form.body_text" :rows="4" required size="lg" class="w-full" />
           </UFormField>
-          <UButton type="submit" color="neutral" block size="lg" :loading="saving">Enviar a revisión</UButton>
+          <UButton type="submit" color="primary" block size="lg" :loading="saving">Enviar a revisión</UButton>
         </form>
       </template>
     </UModal>

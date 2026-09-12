@@ -109,7 +109,7 @@ async function handleSetNewPassword() {
   <div class="min-h-screen flex items-center justify-center bg-white p-4">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 bg-gray-900">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 bg-mauloasan-dark">
           <UIcon name="i-heroicons-bolt" class="text-white text-3xl" />
         </div>
         <h1 class="text-2xl font-bold text-gray-900">Zeus</h1>
@@ -146,7 +146,7 @@ async function handleSetNewPassword() {
             />
           </UFormField>
 
-          <UButton type="submit" block size="lg" color="neutral" :loading="loading" class="mt-2">
+          <UButton type="submit" block size="lg" color="primary" :loading="loading" class="mt-2">
             Entrar
           </UButton>
         </form>
@@ -186,7 +186,7 @@ async function handleSetNewPassword() {
             />
           </UFormField>
 
-          <UButton type="submit" block size="lg" color="neutral" :loading="settingNewPassword" class="mt-2">
+          <UButton type="submit" block size="lg" color="primary" :loading="settingNewPassword" class="mt-2">
             Continuar
           </UButton>
         </form>

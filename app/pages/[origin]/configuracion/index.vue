@@ -199,7 +199,7 @@ async function deletePunto(p: PuntoEmision) {
               <UInput v-model="taxForm.tax_id" size="lg" class="w-full" />
             </UFormField>
           </div>
-          <UButton type="submit" color="neutral" size="lg" :loading="savingTax">Guardar</UButton>
+          <UButton type="submit" color="primary" size="lg" :loading="savingTax">Guardar</UButton>
         </form>
       </UCard>
 
@@ -217,7 +217,7 @@ async function deletePunto(p: PuntoEmision) {
           <UFormField label="Régimen" name="regimen">
             <USelectMenu v-model="contribuyenteForm.regimen" :items="regimenOptions" value-key="value" size="lg" class="w-full" />
           </UFormField>
-          <UButton type="submit" color="neutral" size="lg" :loading="savingContribuyente">Guardar</UButton>
+          <UButton type="submit" color="primary" size="lg" :loading="savingContribuyente">Guardar</UButton>
         </form>
       </UCard>
 
@@ -241,7 +241,7 @@ async function deletePunto(p: PuntoEmision) {
           <UFormField label="Contraseña del certificado" name="password">
             <UInput v-model="signPassword" type="password" size="lg" class="w-full" />
           </UFormField>
-          <UButton type="submit" color="neutral" size="lg" :loading="savingSign" :disabled="!signFile || !signPassword">
+          <UButton type="submit" color="primary" size="lg" :loading="savingSign" :disabled="!signFile || !signPassword">
             Guardar firma electrónica
           </UButton>
         </form>
@@ -251,7 +251,7 @@ async function deletePunto(p: PuntoEmision) {
         <template #header>
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-gray-800">Puntos de emisión</h2>
-            <UButton size="sm" color="neutral" icon="i-heroicons-plus" @click="openCreatePunto">Nuevo</UButton>
+            <UButton size="sm" color="primary" icon="i-heroicons-plus" @click="openCreatePunto">Nuevo</UButton>
           </div>
         </template>
         <div v-if="!puntos.length" class="text-sm text-gray-400 py-4 text-center">Sin puntos de emisión configurados</div>
@@ -297,7 +297,7 @@ async function deletePunto(p: PuntoEmision) {
           <UFormField label="Descripción" name="descripcion">
             <UInput v-model="puntoForm.descripcion" placeholder="Ej. Caja principal" size="lg" class="w-full" />
           </UFormField>
-          <UButton type="submit" color="neutral" block size="lg" :loading="savingPunto">
+          <UButton type="submit" color="primary" block size="lg" :loading="savingPunto">
             {{ editingPunto ? 'Guardar cambios' : 'Crear punto de emisión' }}
           </UButton>
         </form>

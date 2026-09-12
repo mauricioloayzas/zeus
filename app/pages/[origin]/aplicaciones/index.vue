@@ -84,7 +84,7 @@ async function handleDelete(a: Application) {
         <h1 class="text-xl font-semibold text-gray-900">Aplicaciones</h1>
         <p class="text-sm text-gray-500">Las apps que corren bajo esta plataforma (Clichín, y las que vengan)</p>
       </div>
-      <UButton color="neutral" icon="i-heroicons-plus" @click="openCreate">Nueva aplicación</UButton>
+      <UButton color="primary" icon="i-heroicons-plus" @click="openCreate">Nueva aplicación</UButton>
     </div>
 
     <div v-if="loading" class="flex justify-center py-16">
@@ -136,7 +136,7 @@ async function handleDelete(a: Application) {
           <UFormField label="Activa" name="active">
             <USwitch v-model="form.active" />
           </UFormField>
-          <UButton type="submit" color="neutral" block size="lg" :loading="saving">
+          <UButton type="submit" color="primary" block size="lg" :loading="saving">
             {{ editing ? 'Guardar cambios' : 'Crear aplicación' }}
           </UButton>
         </form>
