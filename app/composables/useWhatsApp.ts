@@ -9,6 +9,9 @@ export function useWhatsApp() {
       return (res as unknown as { data: WhatsAppAccount | null }).data ?? null
     },
 
+    connect: (profileId: string, data: { code: string, waba_id: string, phone_number_id?: string, business_id?: string, is_coexistence?: boolean }) =>
+      post<WhatsAppAccount>(`/profiles/${profileId}/whatsapp/connect`, data),
+
     disconnect: (profileId: string) => del<{ disconnected: boolean }>(`/profiles/${profileId}/whatsapp/account`),
 
     listTemplates: async (profileId: string) => {
@@ -24,5 +27,8 @@ export function useWhatsApp() {
 
     testTemplate: (profileId: string, templateId: string, to: string) =>
       post<unknown>(`/profiles/${profileId}/whatsapp/templates/${templateId}/test`, { to }),
+
+    sendMessage: (profileId: string, to: string, text: string) =>
+      post<unknown>(`/profiles/${profileId}/whatsapp/send`, { to, text }),
   }
 }

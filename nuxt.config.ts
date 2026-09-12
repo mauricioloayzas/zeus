@@ -38,6 +38,8 @@ export default defineNuxtConfig({
       // cualquier perfil "origin" (de cualquier app) sobre el que el usuario tenga RBAC.
       apiAppId: process.env.NUXT_PUBLIC_API_APP_ID || '',
       recaptchaSiteKey: process.env.NUXT_PUBLIC_RECAPTCHA_SITE_KEY || '',
+      metaAppId: process.env.NUXT_PUBLIC_META_APP_ID || '',
+      metaConfigId: process.env.NUXT_PUBLIC_META_CONFIG_ID || '',
     },
   },
 
