@@ -13,6 +13,18 @@ export default defineNuxtConfig({
     },
   },
 
+  nitro: {
+    // ssr:false hace que "/" no tenga links reales que el crawler de Nitro pueda seguir
+    // para descubrir el resto de páginas estáticas (login, sin-acceso) — sin esto, según el
+    // entorno de build, a veces las prerenderiza igual (heurística de Nuxt) y a veces no
+    // (visto en el build de Amplify: solo prerenderizó 200/404/index). Se listan a mano para
+    // que sea determinístico. Las rutas dinámicas [origin]/* no se prerenderizan — dependen
+    // de datos en runtime, las sirve el fallback SPA (200.html) vía la regla de Amplify.
+    prerender: {
+      routes: ['/login', '/sin-acceso'],
+    },
+  },
+
   runtimeConfig: {
     public: {
       apiAuthBase: process.env.NUXT_PUBLIC_API_AUTH_BASE || '',
