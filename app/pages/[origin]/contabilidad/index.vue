@@ -4,7 +4,7 @@ import type { CuentaContableProfile, MayorContable } from '~/types'
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { activeOrigin } = useZeusContext()
-const { list: listCuentas } = useCuentasContables()
+const { list: listCuentas, activar } = useCuentasContables()
 const { listByCuenta } = useMayorContable()
 const toast = useToast()
 
@@ -15,6 +15,25 @@ const selectedCuentaId = ref<string>('')
 const mayor = ref<MayorContable[]>([])
 const loadingCuentas = ref(true)
 const loadingMayor = ref(false)
+const activando = ref(false)
+
+async function handleActivar() {
+  if (!profileId.value) return
+  activando.value = true
+  try {
+    const res = await activar(profileId.value)
+    if (res.already_initialized) {
+      toast.add({ title: 'El módulo ya estaba activado', color: 'neutral' })
+    } else {
+      toast.add({ title: `Plan de cuentas NIIF cargado (${res.cuentas} cuentas)`, color: 'success' })
+    }
+    await loadCuentas()
+  } catch (e: unknown) {
+    toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  } finally {
+    activando.value = false
+  }
+}
 
 const cuentaOptions = computed(() =>
   cuentas.value.filter((c) => c.es_detalle).map((c) => ({ label: `${c.codigo} — ${c.nombre}`, value: c.id }))
@@ -64,6 +83,15 @@ onMounted(loadCuentas)
 
     <div v-if="loadingCuentas" class="flex justify-center py-16">
       <UIcon name="i-heroicons-arrow-path" class="animate-spin text-3xl text-gray-400" />
+    </div>
+    <div v-else-if="!cuentas.length" class="border border-gray-200 rounded-xl p-10 text-center mt-6">
+      <UIcon name="i-heroicons-calculator" class="text-4xl text-gray-300 mx-auto mb-3" />
+      <h2 class="text-base font-medium text-mauloasan-dark mb-1">Todavía no se activó la contabilidad</h2>
+      <p class="text-sm text-gray-500 max-w-sm mx-auto mb-5">
+        Al activar, se clona el plan de cuentas oficial NIIF hacia {{ activeOrigin?.profile.name }}: queda
+        listo para registrar asientos, mayorizar y llevar la contabilidad formal.
+      </p>
+      <UButton color="primary" :loading="activando" @click="handleActivar">Activar módulo de contabilidad</UButton>
     </div>
     <template v-else>
       <UFormField label="Cuenta" name="cuenta" class="mb-4 max-w-sm">

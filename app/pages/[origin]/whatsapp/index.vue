@@ -83,6 +83,133 @@ const form = reactive<WhatsAppTemplateForm>({
   name: '', language: 'es', category: 'UTILITY', body_text: '', variables_example: [],
 })
 const variablesExampleText = ref('')
+const includeDocumentHeader = ref(false)
+const headerFileName = ref('')
+const headerDocumentBase64 = ref('')
+const headerDocumentMimeType = ref('')
+
+// Mismo catálogo que caja-registradora/frontend (profile/whatsapp.vue) — cada negocio igual
+// necesita aprobar su propia plantilla en su propio WABA, esto solo evita redactarla desde cero.
+interface DefaultTemplate {
+  key: string
+  label: string
+  description: string
+  name: string
+  language: string
+  category: WhatsAppTemplateForm['category']
+  body_text: string
+  variables_example: string[]
+  requires_document_header: boolean
+}
+
+const DEFAULT_TEMPLATES: DefaultTemplate[] = [
+  {
+    key: 'cita_pendiente',
+    label: 'Cita pendiente',
+    description: 'Se envía cuando un cliente solicita una cita, antes de confirmarla',
+    name: 'cita_pendiente',
+    language: 'es',
+    category: 'UTILITY',
+    body_text: 'Hola {{1}}, recibimos tu solicitud de cita para el {{2}} a las {{3}}. Te avisaremos cuando quede confirmada.',
+    variables_example: ['Juan', '20/07/2026', '10:00'],
+    requires_document_header: false,
+  },
+  {
+    key: 'cita_confirmada',
+    label: 'Cita confirmada',
+    description: 'Se envía cuando el negocio confirma la cita',
+    name: 'cita_confirmada',
+    language: 'es',
+    category: 'UTILITY',
+    body_text: 'Hola {{1}}, tu cita quedó *confirmada* para el {{2}} de {{3}} a {{4}}. Te esperamos.',
+    variables_example: ['Juan', '20/07/2026', '10:00', '10:30'],
+    requires_document_header: false,
+  },
+  {
+    key: 'cita_cancelada',
+    label: 'Cita cancelada',
+    description: 'Se envía cuando la cita se cancela',
+    name: 'cita_cancelada',
+    language: 'es',
+    category: 'UTILITY',
+    body_text: 'Hola {{1}}, tu cita del {{2}} a las {{3}} fue *cancelada*. Si tienes dudas contáctanos.',
+    variables_example: ['Juan', '20/07/2026', '10:00'],
+    requires_document_header: false,
+  },
+  {
+    key: 'cita_recordatorio',
+    label: 'Recordatorio de cita',
+    description: 'Se envía unos días antes de la cita (fuera de la ventana de 24h, necesita ser plantilla)',
+    name: 'cita_recordatorio',
+    language: 'es',
+    category: 'UTILITY',
+    body_text: 'Hola {{1}}, te recordamos tu cita del {{2}} de {{3}} a {{4}}.',
+    variables_example: ['Juan', '20/07/2026', '10:00', '10:30'],
+    requires_document_header: false,
+  },
+  {
+    key: 'documento_autorizado',
+    label: 'Comprobante generado',
+    description: 'Se envía con el comprobante electrónico adjunto (PDF/XML) al autorizarse ante el SRI',
+    // OJO: el nombre y el orden de variables tienen que coincidir exacto con lo que espera
+    // notifier/backend (services/notificaciones/documento-autorizado.php) — si se cambia
+    // cualquiera de los dos ahí, cambiar también acá.
+    name: 'documento_autorizado',
+    language: 'es',
+    category: 'UTILITY',
+    body_text: 'Hola {{1}}, tu {{2}} fue autorizado por el SRI (Núm. autorización {{3}}). Total: {{4}}. Lo encuentras adjunto en este mensaje.',
+    variables_example: ['Juan', 'factura', '1234567890123456789012345678901234567890123456789', '$45.00'],
+    requires_document_header: true,
+  },
+  {
+    key: 'reporte_formulario_104_listo',
+    label: 'Formulario 104 generado',
+    description: 'Aviso al generar el Formulario 104 (IVA mensual) desde Reportes',
+    name: 'reporte_formulario_104_listo',
+    language: 'es',
+    category: 'UTILITY',
+    body_text: 'Hola {{1}}, se generó el Formulario 104 de {{2}}. IVA causado: {{3}}, crédito tributario a favor: {{4}}. Revisa tu correo para el detalle completo.',
+    variables_example: ['Juan', '2026-08', '$0.00', '$45.00'],
+    requires_document_header: false,
+  },
+  {
+    key: 'reporte_ats_listo',
+    label: 'ATS generado',
+    description: 'Aviso con el XML del ATS adjunto, al generarlo desde Reportes',
+    name: 'reporte_ats_listo',
+    language: 'es',
+    category: 'UTILITY',
+    body_text: 'Hola {{1}}, se generó el ATS de {{2}}. Lo encuentras adjunto en este mensaje.',
+    variables_example: ['Juan', '2026-08'],
+    requires_document_header: true,
+  },
+]
+
+function useDefaultTemplate(t: DefaultTemplate) {
+  form.name = t.name
+  form.language = t.language
+  form.category = t.category
+  form.body_text = t.body_text
+  variablesExampleText.value = t.variables_example.join(', ')
+  includeDocumentHeader.value = t.requires_document_header
+  headerFileName.value = ''
+  headerDocumentBase64.value = ''
+  headerDocumentMimeType.value = ''
+  showModal.value = true
+}
+
+function onHeaderFileChange(event: Event) {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  headerFileName.value = file.name
+  headerDocumentMimeType.value = file.type || 'application/pdf'
+  const reader = new FileReader()
+  reader.onload = () => {
+    const result = reader.result as string
+    headerDocumentBase64.value = result.split(',')[1] ?? ''
+  }
+  reader.readAsDataURL(file)
+}
 
 function openCreate() {
   form.name = ''
@@ -90,17 +217,34 @@ function openCreate() {
   form.category = 'UTILITY'
   form.body_text = ''
   variablesExampleText.value = ''
+  includeDocumentHeader.value = false
+  headerFileName.value = ''
+  headerDocumentBase64.value = ''
+  headerDocumentMimeType.value = ''
   showModal.value = true
 }
 
 async function submitTemplate() {
   if (!profileId.value) return
+  if (includeDocumentHeader.value && !headerDocumentBase64.value) {
+    toast.add({ title: 'Subí un archivo de ejemplo para el header de documento', color: 'error' })
+    return
+  }
   saving.value = true
   try {
     form.variables_example = variablesExampleText.value
       ? variablesExampleText.value.split(',').map((v) => v.trim()).filter(Boolean)
       : []
-    await createTemplate(profileId.value, form)
+    await createTemplate(profileId.value, {
+      ...form,
+      ...(includeDocumentHeader.value
+        ? {
+            header_document_base64: headerDocumentBase64.value,
+            header_document_mime_type: headerDocumentMimeType.value,
+            header_document_filename: headerFileName.value,
+          }
+        : {}),
+    })
     toast.add({ title: 'Plantilla enviada a revisión de Meta', color: 'success' })
     showModal.value = false
     await load()
@@ -216,6 +360,22 @@ function templateStatusColor(status: string) {
 
     <UModal v-model:open="showModal" title="Nueva plantilla">
       <template #body>
+        <div class="mb-4 pb-4 border-b border-gray-100">
+          <p class="text-xs font-medium text-gray-500 mb-2">Plantillas predeterminadas</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              v-for="t in DEFAULT_TEMPLATES"
+              :key="t.key"
+              type="button"
+              class="text-left border border-gray-200 rounded-lg p-2 hover:border-brand-400 transition-colors"
+              @click="useDefaultTemplate(t)"
+            >
+              <p class="text-sm font-medium text-gray-900">{{ t.label }}</p>
+              <p class="text-xs text-gray-500">{{ t.description }}</p>
+            </button>
+          </div>
+        </div>
+
         <form class="space-y-4" @submit.prevent="submitTemplate">
           <UFormField label="Nombre" name="name" help="Solo minúsculas y guiones bajos">
             <UInput v-model="form.name" required size="lg" class="w-full" />
@@ -240,6 +400,23 @@ function templateStatusColor(status: string) {
           <UFormField label="Valores de ejemplo" name="variables_example" help="Separados por coma, en orden — Meta los pide para aprobar la plantilla">
             <UInput v-model="variablesExampleText" placeholder="Juan, 20/07/2026" size="lg" class="w-full" />
           </UFormField>
+
+          <UCheckbox v-model="includeDocumentHeader" label="Incluye un documento adjunto (ej. para enviar comprobantes electrónicos)" />
+
+          <UFormField
+            v-if="includeDocumentHeader"
+            label="Archivo de ejemplo (Meta lo pide para aprobar el header, no es el documento real que se va a enviar)"
+            name="header_document"
+          >
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.xml"
+              class="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-mauloasan-dark file:text-white file:text-sm hover:file:opacity-90"
+              @change="onHeaderFileChange"
+            >
+            <p v-if="headerFileName" class="text-xs text-gray-500 mt-1">{{ headerFileName }}</p>
+          </UFormField>
+
           <UButton type="submit" color="primary" block size="lg" :loading="saving">Enviar a revisión</UButton>
         </form>
       </template>

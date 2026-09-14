@@ -170,6 +170,13 @@ export interface CuentaContableProfile {
   updated_at: string | null
 }
 
+export interface CuentaContableInitResult {
+  already_initialized: boolean
+  cuentas: number
+  base_cuentas?: number
+  success?: boolean
+}
+
 export interface MayorContable {
   id: string
   cuenta_id: string
@@ -247,6 +254,97 @@ export interface ContribuyenteForm {
   regimen?: Regimen
   contribuyente_especial?: string
   obligado_contabilidad?: string
+}
+
+export type EstadoDocumento = 'borrador' | 'generado' | 'firmado' | 'enviado' | 'autorizado' | 'rechazado' | 'anulado'
+export type TipoIdentificacion = '04' | '05' | '06' | '07' | '09'
+export type EstadoProforma = 'activa' | 'convertida' | 'anulada'
+
+export interface Proforma {
+  id: string
+  profile_id: string
+  numero: string
+  estado: EstadoProforma
+  fecha_emision: string
+  tipo_identificacion: TipoIdentificacion
+  identificacion: string
+  razon_social: string
+  importeTotal: number
+  moneda: string
+  created_at: string
+}
+
+export interface NotaCredito {
+  id: string
+  profile_id: string
+  estado: EstadoDocumento
+  info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
+  info_nota_credito: {
+    fechaEmision: string
+    razonSocialComprador: string
+    identificacionComprador: string
+    valorModificacion: number
+    moneda: string
+  }
+  created_at: string
+}
+
+export interface NotaDebito {
+  id: string
+  profile_id: string
+  estado: EstadoDocumento
+  info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
+  info_nota_debito: {
+    fechaEmision: string
+    razonSocialComprador: string
+    identificacionComprador: string
+    valorTotal: number
+  }
+  created_at: string
+}
+
+export interface GuiaRemision {
+  id: string
+  profile_id: string
+  estado: EstadoDocumento
+  info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
+  info_guia_remision: {
+    fechaIniTransporte: string
+    fechaFinTransporte: string
+    placa: string
+  }
+  destinatarios: { razonSocialDestinatario: string, identificacionDestinatario: string }[]
+  created_at: string
+}
+
+export interface ComprobanteRetencion {
+  id: string
+  profile_id: string
+  estado: EstadoDocumento
+  info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
+  info_comp_retencion: {
+    fechaEmision: string
+    razonSocialSujetoRetenido: string
+    identificacionSujetoRetenido: string
+    periodoFiscal: string
+  }
+  impuestos: { valorRetenido: number }[]
+  created_at: string
+}
+
+export interface LiquidacionCompra {
+  id: string
+  profile_id: string
+  estado: EstadoDocumento
+  info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
+  info_liquidacion_compra: {
+    fechaEmision: string
+    razonSocialProveedor: string
+    identificacionProveedor: string
+    importeTotal: number
+    moneda: string
+  }
+  created_at: string
 }
 
 export type PuntoEmisionStatus = 'active' | 'inactive'
