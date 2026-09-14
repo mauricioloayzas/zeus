@@ -1,20 +1,31 @@
-// Flujo de WhatsApp Embedded Signup (Tech Provider): abre el diálogo OAuth de Meta en una
-// ventana emergente y combina dos cosas que llegan por separado — el `code` y el
-// waba_id/phone_number_id (evento postMessage que manda Meta durante el signup) — en un solo
-// resultado para mandarle a notifier's /whatsapp/connect.
+// Flujo de WhatsApp Embedded Signup (Tech Provider): carga el SDK de Facebook, abre el
+// login y combina dos cosas que llegan por separado — el `code` (respuesta de FB.login)
+// y el waba_id/phone_number_id (evento postMessage que manda Meta durante el signup) —
+// en un solo resultado para mandarle a notifier's /whatsapp/connect.
 //
-// A diferencia de la versión anterior (y de caja-registradora/frontend), esta NO usa
-// FB.login() del SDK de JS — se confirmó en vivo que el puente que usa FB.login()
-// (channel_url/xd_arbiter, un iframe de staticxx.facebook.com) no entrega el `code` de
-// forma confiable en algunos navegadores, mientras que navegar directo a la misma URL de
-// Meta sí funciona siempre. Acá se arma esa misma URL a mano y se abre con window.open() —
-// sin el puente de por medio — y el `code` se recupera por un mecanismo propio: el
-// redirect_uri apunta de vuelta a esta misma página, que al detectar `?code=` en la URL
-// (ver el onMounted más abajo) se lo reenvía a la ventana que la abrió y se cierra sola.
-//
-// Requiere que el dominio esté en "Valid OAuth Redirect URIs" de Facebook Login (Configuración
-// del producto), además de "Allowed Domains for the JavaScript SDK" — antes solo hacía falta
-// esto último porque FB.login() no pasaba por un redirect_uri real.
+// Se volvió a FB.login() (el mecanismo gestionado por el SDK) después de probar reemplazarlo
+// por un window.open() a mano: ese cambio rompió la entrega del `code` al final del wizard de
+// varios pasos (Meta cierra la ventana sola al terminar en vez de redirigir a un redirect_uri
+// nuestro) — confirmado en vivo, el proceso se completaba en la ventana de Meta pero nunca
+// llegaba nada a Zeus. El diagnóstico original de "el puente de FB.login() está roto" fue
+// prematuro: en todos los intentos previos el flujo fallaba de entrada por el featureType
+// faltante (ver extras más abajo), así que nunca se llegó a probar FB.login() con un signup
+// que de verdad avanzara hasta el final.
+
+declare global {
+  interface Window {
+    FB?: {
+      init: (params: Record<string, unknown>) => void
+      login: (callback: (response: FacebookLoginResponse) => void, params: Record<string, unknown>) => void
+    }
+    fbAsyncInit?: () => void
+  }
+}
+
+interface FacebookLoginResponse {
+  authResponse?: { code?: string }
+  status?: string
+}
 
 interface EmbeddedSignupResult {
   code: string
@@ -28,24 +39,40 @@ interface EmbeddedSignupResult {
   isCoexistence: boolean
 }
 
-const RELAY_MESSAGE_TYPE = 'ZEUS_META_EMBEDDED_SIGNUP_CODE'
+let sdkLoadPromise: Promise<void> | null = null
+
+function loadFacebookSdk(appId: string): Promise<void> {
+  if (sdkLoadPromise) return sdkLoadPromise
+
+  sdkLoadPromise = new Promise((resolve) => {
+    window.fbAsyncInit = () => {
+      window.FB?.init({
+        appId,
+        autoLogAppEvents: true,
+        xfbml: false,
+        version: 'v25.0',
+      })
+      resolve()
+    }
+
+    if (document.getElementById('facebook-jssdk')) {
+      resolve()
+      return
+    }
+
+    const script = document.createElement('script')
+    script.id = 'facebook-jssdk'
+    script.src = 'https://connect.facebook.net/es_LA/sdk.js'
+    script.async = true
+    script.defer = true
+    document.body.appendChild(script)
+  })
+
+  return sdkLoadPromise
+}
 
 export function useMetaEmbeddedSignup() {
   const config = useRuntimeConfig()
-
-  // Si esta pestaña es en realidad el popup que Meta redirigió de vuelta con ?code=...,
-  // reenvía el code a quien la abrió (window.opener) y se cierra. No hace nada si la página
-  // se cargó normal (sin opener, o sin ?code en la URL).
-  if (import.meta.client) {
-    onMounted(() => {
-      if (!window.opener) return
-      const params = new URLSearchParams(window.location.search)
-      const code = params.get('code')
-      if (!code) return
-      window.opener.postMessage({ type: RELAY_MESSAGE_TYPE, code }, window.location.origin)
-      window.close()
-    })
-  }
 
   async function launch(): Promise<EmbeddedSignupResult> {
     const appId = config.public.metaAppId as string
@@ -55,47 +82,26 @@ export function useMetaEmbeddedSignup() {
       throw new Error('Falta configurar NUXT_PUBLIC_META_APP_ID / NUXT_PUBLIC_META_CONFIG_ID')
     }
 
+    await loadFacebookSdk(appId)
+
     return new Promise((resolve, reject) => {
       let signupData: { wabaId?: string, phoneNumberId?: string, businessId?: string, isCoexistence?: boolean } = {}
       let loginCode: string | undefined
-      let settled = false
-      let closeCheck: ReturnType<typeof setInterval> | undefined
 
-      function cleanup() {
-        window.removeEventListener('message', onMessage)
-        if (closeCheck) clearInterval(closeCheck)
-      }
-
-      function finishResolve() {
-        if (settled || !loginCode || !signupData.wabaId) return
-        settled = true
-        cleanup()
-        resolve({
-          code: loginCode,
-          wabaId: signupData.wabaId,
-          phoneNumberId: signupData.phoneNumberId,
-          businessId: signupData.businessId,
-          isCoexistence: signupData.isCoexistence ?? false,
-        })
-      }
-
-      function finishReject(message: string) {
-        if (settled) return
-        settled = true
-        cleanup()
-        reject(new Error(message))
+      function tryResolve() {
+        if (loginCode && signupData.wabaId) {
+          window.removeEventListener('message', onMessage)
+          resolve({
+            code: loginCode,
+            wabaId: signupData.wabaId,
+            phoneNumberId: signupData.phoneNumberId,
+            businessId: signupData.businessId,
+            isCoexistence: signupData.isCoexistence ?? false,
+          })
+        }
       }
 
       function onMessage(event: MessageEvent) {
-        // El code relanzado por nuestra propia página (ver onMounted arriba).
-        if (event.origin === window.location.origin) {
-          if (event.data?.type === RELAY_MESSAGE_TYPE && event.data.code) {
-            loginCode = event.data.code
-            finishResolve()
-          }
-          return
-        }
-
         if (!event.origin.endsWith('facebook.com')) return
 
         try {
@@ -109,18 +115,20 @@ export function useMetaEmbeddedSignup() {
               businessId: data.data?.business_id,
               isCoexistence: false,
             }
-            finishResolve()
+            tryResolve()
           } else if (data.event === 'FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING') {
             signupData = {
               wabaId: data.data?.waba_id,
               businessId: data.data?.business_id,
               isCoexistence: true,
             }
-            finishResolve()
+            tryResolve()
           } else if (data.event === 'FINISH_ONLY_WABA' || data.event === 'FINISH_OBO_MIGRATION') {
-            finishReject('Este tipo de conexión de WhatsApp todavía no está soportado.')
+            window.removeEventListener('message', onMessage)
+            reject(new Error('Este tipo de conexión de WhatsApp todavía no está soportado.'))
           } else if (data.event === 'CANCEL' || data.event === 'ERROR') {
-            finishReject(data.data?.error_message || 'Se canceló la conexión con WhatsApp')
+            window.removeEventListener('message', onMessage)
+            reject(new Error(data.data?.error_message || 'Se canceló la conexión con WhatsApp'))
           }
         } catch {
           // mensajes de otros orígenes/formatos, se ignoran
@@ -129,39 +137,30 @@ export function useMetaEmbeddedSignup() {
 
       window.addEventListener('message', onMessage)
 
-      const redirectUri = `${window.location.origin}${window.location.pathname}`
-      const dialogParams = new URLSearchParams({
-        app_id: appId,
+      window.FB?.login((response) => {
+        if (response.authResponse?.code) {
+          loginCode = response.authResponse.code
+          tryResolve()
+        } else {
+          window.removeEventListener('message', onMessage)
+          reject(new Error(
+            'No se completó el login de Facebook. Si viste un error de Facebook en la ventana '
+            + '("Sorry, something went wrong"), prueba en una ventana de incógnito o desactiva '
+            + 'temporalmente tu bloqueador de anuncios/extensiones.',
+          ))
+        }
+      }, {
         config_id: configId,
         response_type: 'code',
-        override_default_response_type: 'true',
+        override_default_response_type: true,
         // El extras "simplificado" ({setup:{}}) que documenta v4 para el caso general no
         // ofrece la opción de Coexistence en la práctica (confirmado en vivo: siempre tira
-        // "ya registrado" en vez de dejar elegir) — hace falta este featureType explícito
-        // para que el selector muestre la opción de conectar una cuenta ya existente de la
-        // app de WhatsApp Business. Mismo formato que genera el propio Meta App Dashboard
-        // para "Onboard business app users".
-        extras: JSON.stringify({ version: 'v4', sessionInfoVersion: '3', featureType: 'whatsapp_business_app_onboarding' }),
-        redirect_uri: redirectUri,
-        display: 'popup',
+        // "ya registrado" en vez de dejar elegir) — hace falta este featureType explícito,
+        // mismo formato que genera el propio Meta App Dashboard para "Onboard business app
+        // users". Confirmado que con esto siguen apareciendo ambas opciones (cuenta existente
+        // o número nuevo), no restringe nada.
+        extras: { version: 'v4', sessionInfoVersion: '3', featureType: 'whatsapp_business_app_onboarding' },
       })
-
-      const popup = window.open(
-        `https://www.facebook.com/v25.0/dialog/oauth?${dialogParams.toString()}`,
-        'meta_embedded_signup',
-        'width=600,height=720,menubar=no,toolbar=no,status=no',
-      )
-
-      if (!popup) {
-        finishReject('El navegador bloqueó la ventana emergente — permití popups para este sitio e intentá de nuevo.')
-        return
-      }
-
-      closeCheck = setInterval(() => {
-        if (popup.closed) {
-          finishReject('Se cerró la ventana de conexión antes de completar el proceso.')
-        }
-      }, 1000)
     })
   }
 
