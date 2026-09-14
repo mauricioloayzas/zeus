@@ -135,7 +135,13 @@ export function useMetaEmbeddedSignup() {
         config_id: configId,
         response_type: 'code',
         override_default_response_type: 'true',
-        extras: JSON.stringify({ setup: {} }),
+        // El extras "simplificado" ({setup:{}}) que documenta v4 para el caso general no
+        // ofrece la opción de Coexistence en la práctica (confirmado en vivo: siempre tira
+        // "ya registrado" en vez de dejar elegir) — hace falta este featureType explícito
+        // para que el selector muestre la opción de conectar una cuenta ya existente de la
+        // app de WhatsApp Business. Mismo formato que genera el propio Meta App Dashboard
+        // para "Onboard business app users".
+        extras: JSON.stringify({ version: 'v4', sessionInfoVersion: '3', featureType: 'whatsapp_business_app_onboarding' }),
         redirect_uri: redirectUri,
         display: 'popup',
       })
