@@ -3,14 +3,14 @@
 // y el waba_id/phone_number_id (evento postMessage que manda Meta durante el signup) —
 // en un solo resultado para mandarle a notifier's /whatsapp/connect.
 //
-// Se volvió a FB.login() (el mecanismo gestionado por el SDK) después de probar reemplazarlo
-// por un window.open() a mano: ese cambio rompió la entrega del `code` al final del wizard de
-// varios pasos (Meta cierra la ventana sola al terminar en vez de redirigir a un redirect_uri
-// nuestro) — confirmado en vivo, el proceso se completaba en la ventana de Meta pero nunca
-// llegaba nada a Zeus. El diagnóstico original de "el puente de FB.login() está roto" fue
-// prematuro: en todos los intentos previos el flujo fallaba de entrada por el featureType
-// faltante (ver extras más abajo), así que nunca se llegó a probar FB.login() con un signup
-// que de verdad avanzara hasta el final.
+// Confirmado en vivo: el puente interno que usa FB.login() para traer el `code` de vuelta
+// (channel_url/xd_arbiter) no es confiable — cuando falla, Meta cae a un `fallback_redirect_uri`
+// que apunta directo a esta misma página, y la ventana emergente termina mostrando Zeus
+// cargado dentro suyo en vez de cerrarse. El bloque RELAY más abajo detecta justo ese caso
+// (esta página abierta dentro de un popup, con ?code= en la URL) y le pasa el code a la
+// ventana que la abrió — sin eso, el signup se completaba en Meta pero nunca llegaba nada
+// de vuelta a Zeus. No se reemplaza FB.login() por un window.open() a mano (ya se probó:
+// eso rompe el wizard completo, Meta espera manejar la ventana él mismo).
 
 declare global {
   interface Window {
@@ -38,6 +38,8 @@ interface EmbeddedSignupResult {
    * número nuevo — sigue funcionando en la app del celular en paralelo a Zeus/Clichín. */
   isCoexistence: boolean
 }
+
+const RELAY_MESSAGE_TYPE = 'ZEUS_META_EMBEDDED_SIGNUP_CODE'
 
 let sdkLoadPromise: Promise<void> | null = null
 
@@ -74,6 +76,21 @@ function loadFacebookSdk(appId: string): Promise<void> {
 export function useMetaEmbeddedSignup() {
   const config = useRuntimeConfig()
 
+  // RELAY: si esta pestaña es en realidad el popup que Meta redirigió de vuelta (porque el
+  // puente interno de FB.login() falló), reenvía el `code` a quien la abrió y se cierra. No
+  // hace nada si la página se cargó normal (sin opener, o sin ?code en la URL) — en el caso
+  // normal (puente interno funciona bien) esto nunca llega a ejecutarse.
+  if (import.meta.client) {
+    onMounted(() => {
+      if (!window.opener) return
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+      if (!code) return
+      window.opener.postMessage({ type: RELAY_MESSAGE_TYPE, code }, window.location.origin)
+      window.close()
+    })
+  }
+
   async function launch(): Promise<EmbeddedSignupResult> {
     const appId = config.public.metaAppId as string
     const configId = config.public.metaConfigId as string
@@ -102,6 +119,16 @@ export function useMetaEmbeddedSignup() {
       }
 
       function onMessage(event: MessageEvent) {
+        // El code reenviado por nuestra propia página (ver RELAY arriba), cuando el puente
+        // interno de FB.login() no entregó el code por su cuenta.
+        if (event.origin === window.location.origin) {
+          if (event.data?.type === RELAY_MESSAGE_TYPE && event.data.code && !loginCode) {
+            loginCode = event.data.code
+            tryResolve()
+          }
+          return
+        }
+
         if (!event.origin.endsWith('facebook.com')) return
 
         try {
@@ -138,16 +165,23 @@ export function useMetaEmbeddedSignup() {
       window.addEventListener('message', onMessage)
 
       window.FB?.login((response) => {
-        if (response.authResponse?.code) {
+        if (response.authResponse?.code && !loginCode) {
           loginCode = response.authResponse.code
           tryResolve()
-        } else {
-          window.removeEventListener('message', onMessage)
-          reject(new Error(
-            'No se completó el login de Facebook. Si viste un error de Facebook en la ventana '
-            + '("Sorry, something went wrong"), prueba en una ventana de incógnito o desactiva '
-            + 'temporalmente tu bloqueador de anuncios/extensiones.',
-          ))
+        } else if (!loginCode) {
+          // No se rechaza de una: puede que el RELAY (arriba) todavía entregue el code por
+          // el camino del fallback_redirect_uri — se le da un margen antes de darse por
+          // vencido, en vez de cortar la promesa apenas FB.login() vuelve sin code.
+          setTimeout(() => {
+            if (!loginCode) {
+              window.removeEventListener('message', onMessage)
+              reject(new Error(
+                'No se completó el login de Facebook. Si viste un error de Facebook en la ventana '
+                + '("Sorry, something went wrong"), prueba en una ventana de incógnito o desactiva '
+                + 'temporalmente tu bloqueador de anuncios/extensiones.',
+              ))
+            }
+          }, 5000)
         }
       }, {
         config_id: configId,
