@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { WhatsAppAccount, WhatsAppTemplate, WhatsAppTemplateForm } from '~/types'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 // Solo para el perfil origin: cualquier otro perfil de Clichín/Hayayaku ya puede conectar y
 // configurar su propio WhatsApp desde su propio frontend — no hace falta duplicarlo acá.

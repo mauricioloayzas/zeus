@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Profile, ProfileType } from '~/types'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { list, create, update, updateStatus } = useProfiles()
 const { activeOrigin } = useZeusContext()

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-definePageMeta({ middleware: ['auth', 'origin'] })
+// El middleware NO se declara acá — definePageMeta solo tiene efecto en archivos de
+// pages/, no en layouts/ (era un no-op silencioso: por eso al recargar la página de una,
+// sin haber navegado antes desde adentro de la app, el estado quedaba vacío). Cada página
+// que usa layout: 'admin' declara ['auth', 'origin'] en su propio definePageMeta.
 
 const { user, clearSession } = useAuth()
 const { origins, activeOrigin, isOwner, setActiveOrigin, clearContext } = useZeusContext()

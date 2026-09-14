@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Application } from '~/types'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { list, create, update, remove } = useApplications()
 const toast = useToast()

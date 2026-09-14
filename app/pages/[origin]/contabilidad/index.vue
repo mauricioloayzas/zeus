@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CuentaContableProfile, MayorContable } from '~/types'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { activeOrigin } = useZeusContext()
 const { list: listCuentas } = useCuentasContables()

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PuntoEmision } from '~/types'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { activeOrigin } = useZeusContext()
 const { getOne, update: updateProfile } = useProfiles()
