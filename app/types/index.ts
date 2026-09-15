@@ -336,6 +336,83 @@ export interface ContribuyenteForm {
   obligado_contabilidad?: string
 }
 
+export type CodigoImpuesto = '1' | '2' | '3' | '5'
+
+export interface Formulario104Result {
+  anio: string
+  mes: string
+  ventas: {
+    gravadas_tarifa_diferente_0: number
+    tarifa_0: number
+    exentas_no_objeto: number
+    iva_generado: number
+  }
+  compras: {
+    gravadas_con_derecho_credito_tributario: number
+    tarifa_0: number
+    exentas_no_objeto: number
+    iva_credito_tributario: number
+  }
+  liquidacion: {
+    iva_causado: number
+    credito_tributario_favor: number
+  }
+  advertencias: string[]
+}
+
+export interface AtsResult {
+  xml: string
+  resumen: {
+    anio: string
+    mes: string
+    total_compras: number
+    total_ventas: number
+    total_iva_compras: number
+    total_iva_ventas: number
+  }
+  advertencias: string[]
+}
+
+export type DocumentoZipTipo = 'facturas' | 'notas-credito' | 'notas-debito' | 'guias-remision' | 'retenciones' | 'liquidaciones-compra'
+
+export interface DocumentZipResult {
+  url: string
+  expira_en_minutos: number
+  total_documentos: number
+}
+
+export interface ReporteRetencionesLinea {
+  comprobante_id: string
+  numero: string
+  fecha_emision: string
+  sujeto_retenido: string
+  identificacion_sujeto_retenido: string
+  tipo_impuesto: CodigoImpuesto
+  codigo_retencion: string
+  descripcion: string | null
+  base_imponible: number
+  porcentaje_retener: number
+  valor_retenido: number
+}
+
+export interface ReporteRetencionesResumen {
+  desde: string
+  hasta: string
+  total_comprobantes: number
+  total_retenido: number
+  total_renta: number
+  total_iva: number
+}
+
+export interface ReporteRetencionesResult {
+  formato: 'csv' | 'pdf'
+  filename: string
+  mime_type: string
+  contenido_base64: string
+  resumen: ReporteRetencionesResumen
+  lineas: ReporteRetencionesLinea[]
+}
+
 export type EstadoDocumento = 'borrador' | 'generado' | 'firmado' | 'enviado' | 'autorizado' | 'rechazado' | 'anulado'
 export type TipoIdentificacion = '04' | '05' | '06' | '07' | '09'
 export type EstadoProforma = 'activa' | 'convertida' | 'anulada'

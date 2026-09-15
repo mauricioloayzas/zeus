@@ -28,6 +28,7 @@ const sharedLinks = [
   { label: 'Suscripciones', icon: 'i-heroicons-credit-card', slug: 'suscripciones' },
   { label: 'Documentos electrónicos', icon: 'i-heroicons-document-text', slug: 'documentos' },
   { label: 'Contabilidad', icon: 'i-heroicons-calculator', slug: 'contabilidad' },
+  { label: 'Reportes', icon: 'i-heroicons-chart-bar-square', slug: 'reportes' },
 ]
 // Configuración SRI y WhatsApp son del perfil origin en sí, no de una app puntual — son
 // iguales sin importar qué aplicación esté elegida en el dropdown de la derecha.
