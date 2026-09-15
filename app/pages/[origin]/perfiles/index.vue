@@ -4,18 +4,25 @@ import type { Profile, ProfileType } from '~/types'
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { list, create, update, updateStatus } = useProfiles()
-const { activeOrigin } = useZeusContext()
+const { list: listSubscriptions } = useSubscriptions()
+const { activeOrigin, applicationName } = useZeusContext()
 const toast = useToast()
 
 const allProfiles = ref<Profile[]>([])
+// Profile no guarda a qué aplicación pertenece (ese vínculo vive en el RBAC/en la suscripción,
+// no en el perfil) — para la columna "Aplicación" se deriva de la suscripción de cada perfil
+// (la app a la que se suscribió). Un perfil todavía sin suscripción (a mitad del onboarding)
+// muestra "—".
+const applicationIdByProfileId = ref<Map<string, string>>(new Map())
 const loading = ref(true)
 
-// Profile no guarda a qué aplicación pertenece (ese vínculo vive en el RBAC, no en el
-// perfil) — lo que SÍ tiene todo perfil es su cadena de parent_id hasta la raíz. Un perfil
-// "es de esta app" si esa cadena termina en el origin activo, igual que el chequeo de acceso
-// del backend (ProfileAccessMiddleware::resolveAncestorChain).
-function belongsToActiveOrigin(profile: Profile, byId: Map<string, Profile>): boolean {
-  if (profile.id === activeOrigin.value?.profile.id) return false // el origin mismo no es "un perfil de la app"
+// Profile no guarda a qué aplicación pertenece, pero SÍ tiene su cadena de parent_id hasta la
+// raíz. Un perfil "es de origin" si esa cadena termina en el origin activo, igual que el
+// chequeo de acceso del backend (ProfileAccessMiddleware::resolveAncestorChain). Ya no se
+// filtra por aplicación seleccionada (ver admin.vue): se listan de una todos los perfiles de
+// cualquier aplicación de origin.
+function belongsToOrigin(profile: Profile, byId: Map<string, Profile>): boolean {
+  if (profile.id === activeOrigin.value?.profile.id) return false // el origin mismo no es "un perfil"
   let current: Profile | undefined = profile
   for (let i = 0; i < 5 && current; i++) {
     if (current.parent_id === activeOrigin.value?.profile.id) return true
@@ -26,13 +33,22 @@ function belongsToActiveOrigin(profile: Profile, byId: Map<string, Profile>): bo
 
 const profiles = computed(() => {
   const byId = new Map(allProfiles.value.map((p) => [p.id, p]))
-  return allProfiles.value.filter((p) => belongsToActiveOrigin(p, byId))
+  return allProfiles.value.filter((p) => belongsToOrigin(p, byId))
 })
+
+function profileApplication(id: string): string {
+  return applicationName(applicationIdByProfileId.value.get(id))
+}
 
 async function load() {
   loading.value = true
   try {
-    allProfiles.value = await list()
+    const [profilesRes, subs] = await Promise.all([
+      list(),
+      activeOrigin.value ? listSubscriptions(activeOrigin.value.profile.id) : Promise.resolve([]),
+    ])
+    allProfiles.value = profilesRes
+    applicationIdByProfileId.value = new Map(subs.map((s) => [s.profile_id, s.application_id]))
   } catch (e: unknown) {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
   } finally {
@@ -124,7 +140,7 @@ async function toggleStatus(p: Profile) {
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-xl font-semibold text-gray-900">Perfiles</h1>
-        <p class="text-sm text-gray-500">Empresas, personas y contadores de {{ activeOrigin?.application?.name ?? activeOrigin?.profile.name }}</p>
+        <p class="text-sm text-gray-500">Empresas, personas y contadores de {{ activeOrigin?.profile.name }}, de todas las aplicaciones</p>
       </div>
       <UButton color="primary" icon="i-heroicons-plus" @click="openCreate">Nuevo perfil</UButton>
     </div>
@@ -145,6 +161,7 @@ async function toggleStatus(p: Profile) {
             <th class="px-4 py-3 font-medium">Nombre</th>
             <th class="px-4 py-3 font-medium">Email</th>
             <th class="px-4 py-3 font-medium">Tipo</th>
+            <th class="px-4 py-3 font-medium">Aplicación</th>
             <th class="px-4 py-3 font-medium">Estado</th>
             <th class="px-4 py-3 font-medium text-right">Acciones</th>
           </tr>
@@ -154,6 +171,7 @@ async function toggleStatus(p: Profile) {
             <td class="px-4 py-3 font-medium text-gray-900">{{ p.name }}</td>
             <td class="px-4 py-3 text-gray-500">{{ p.email || '—' }}</td>
             <td class="px-4 py-3 text-gray-500">{{ typeLabel(p.type) }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ profileApplication(p.id) }}</td>
             <td class="px-4 py-3">
               <UBadge :color="p.status === 'active' ? 'success' : 'neutral'" variant="subtle">
                 {{ p.status === 'active' ? 'Activo' : (p.status || 'active') }}

@@ -3,7 +3,7 @@ import type { Factura, Proforma, NotaCredito, NotaDebito, GuiaRemision, Comproba
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
-const { activeOrigin } = useZeusContext()
+const { activeOrigin, applicationName } = useZeusContext()
 const { list: listFacturas } = useFacturas()
 const { list: listProformas } = useProformas()
 const { list: listNotasCredito } = useNotasCredito()
@@ -138,6 +138,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <th class="px-4 py-3 font-medium">Comprador</th>
                 <th class="px-4 py-3 font-medium">Fecha</th>
                 <th class="px-4 py-3 font-medium">Total</th>
+                <th class="px-4 py-3 font-medium">Aplicación</th>
                 <th class="px-4 py-3 font-medium">Origen</th>
                 <th class="px-4 py-3 font-medium">Estado</th>
               </tr>
@@ -148,6 +149,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <td class="px-4 py-3 text-gray-500">{{ f.info_factura.razonSocialComprador }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ f.info_factura.fechaEmision }}</td>
                 <td class="px-4 py-3 text-gray-500 tabular-nums">${{ f.info_factura.importeTotal.toFixed(2) }}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(f.application_id) }}</td>
                 <td class="px-4 py-3 text-gray-400 text-xs">
                   {{ f.info_adicional?.subscription_id ? 'Suscripción' : (f.info_adicional?.cita_id ? 'Cita' : '—') }}
                 </td>
@@ -172,6 +174,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <th class="px-4 py-3 font-medium">Cliente</th>
                 <th class="px-4 py-3 font-medium">Fecha</th>
                 <th class="px-4 py-3 font-medium">Total</th>
+                <th class="px-4 py-3 font-medium">Aplicación</th>
                 <th class="px-4 py-3 font-medium">Estado</th>
               </tr>
             </thead>
@@ -181,6 +184,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <td class="px-4 py-3 text-gray-500">{{ p.razon_social }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ p.fecha_emision }}</td>
                 <td class="px-4 py-3 text-gray-500 tabular-nums">${{ p.importeTotal.toFixed(2) }}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(p.application_id) }}</td>
                 <td class="px-4 py-3">
                   <UBadge :color="p.estado === 'anulada' ? 'error' : (p.estado === 'convertida' ? 'success' : 'neutral')" variant="subtle">{{ p.estado }}</UBadge>
                 </td>
@@ -204,6 +208,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <th class="px-4 py-3 font-medium">Comprador</th>
                 <th class="px-4 py-3 font-medium">Fecha</th>
                 <th class="px-4 py-3 font-medium">Valor</th>
+                <th class="px-4 py-3 font-medium">Aplicación</th>
                 <th class="px-4 py-3 font-medium">Estado</th>
               </tr>
             </thead>
@@ -213,6 +218,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <td class="px-4 py-3 text-gray-500">{{ n.info_nota_credito.razonSocialComprador }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ n.info_nota_credito.fechaEmision }}</td>
                 <td class="px-4 py-3 text-gray-500 tabular-nums">${{ n.info_nota_credito.valorModificacion.toFixed(2) }}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(n.application_id) }}</td>
                 <td class="px-4 py-3"><UBadge :color="estadoColor(n.estado)" variant="subtle">{{ n.estado }}</UBadge></td>
               </tr>
             </tbody>
@@ -234,6 +240,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <th class="px-4 py-3 font-medium">Comprador</th>
                 <th class="px-4 py-3 font-medium">Fecha</th>
                 <th class="px-4 py-3 font-medium">Valor</th>
+                <th class="px-4 py-3 font-medium">Aplicación</th>
                 <th class="px-4 py-3 font-medium">Estado</th>
               </tr>
             </thead>
@@ -243,6 +250,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <td class="px-4 py-3 text-gray-500">{{ n.info_nota_debito.razonSocialComprador }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ n.info_nota_debito.fechaEmision }}</td>
                 <td class="px-4 py-3 text-gray-500 tabular-nums">${{ n.info_nota_debito.valorTotal.toFixed(2) }}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(n.application_id) }}</td>
                 <td class="px-4 py-3"><UBadge :color="estadoColor(n.estado)" variant="subtle">{{ n.estado }}</UBadge></td>
               </tr>
             </tbody>
@@ -264,6 +272,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <th class="px-4 py-3 font-medium">Destinatario(s)</th>
                 <th class="px-4 py-3 font-medium">Inicio transporte</th>
                 <th class="px-4 py-3 font-medium">Placa</th>
+                <th class="px-4 py-3 font-medium">Aplicación</th>
                 <th class="px-4 py-3 font-medium">Estado</th>
               </tr>
             </thead>
@@ -276,6 +285,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 </td>
                 <td class="px-4 py-3 text-gray-500">{{ g.info_guia_remision.fechaIniTransporte }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ g.info_guia_remision.placa }}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(g.application_id) }}</td>
                 <td class="px-4 py-3"><UBadge :color="estadoColor(g.estado)" variant="subtle">{{ g.estado }}</UBadge></td>
               </tr>
             </tbody>
@@ -297,6 +307,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <th class="px-4 py-3 font-medium">Sujeto retenido</th>
                 <th class="px-4 py-3 font-medium">Periodo fiscal</th>
                 <th class="px-4 py-3 font-medium">Total retenido</th>
+                <th class="px-4 py-3 font-medium">Aplicación</th>
                 <th class="px-4 py-3 font-medium">Estado</th>
               </tr>
             </thead>
@@ -306,6 +317,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <td class="px-4 py-3 text-gray-500">{{ r.info_comp_retencion.razonSocialSujetoRetenido }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ r.info_comp_retencion.periodoFiscal }}</td>
                 <td class="px-4 py-3 text-gray-500 tabular-nums">${{ r.impuestos.reduce((s, i) => s + i.valorRetenido, 0).toFixed(2) }}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(r.application_id) }}</td>
                 <td class="px-4 py-3"><UBadge :color="estadoColor(r.estado)" variant="subtle">{{ r.estado }}</UBadge></td>
               </tr>
             </tbody>
@@ -327,6 +339,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <th class="px-4 py-3 font-medium">Proveedor</th>
                 <th class="px-4 py-3 font-medium">Fecha</th>
                 <th class="px-4 py-3 font-medium">Total</th>
+                <th class="px-4 py-3 font-medium">Aplicación</th>
                 <th class="px-4 py-3 font-medium">Estado</th>
               </tr>
             </thead>
@@ -336,6 +349,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
                 <td class="px-4 py-3 text-gray-500">{{ l.info_liquidacion_compra.razonSocialProveedor }}</td>
                 <td class="px-4 py-3 text-gray-500">{{ l.info_liquidacion_compra.fechaEmision }}</td>
                 <td class="px-4 py-3 text-gray-500 tabular-nums">${{ l.info_liquidacion_compra.importeTotal.toFixed(2) }}</td>
+                <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(l.application_id) }}</td>
                 <td class="px-4 py-3"><UBadge :color="estadoColor(l.estado)" variant="subtle">{{ l.estado }}</UBadge></td>
               </tr>
             </tbody>

@@ -3,12 +3,12 @@ import type { Subscription } from '~/types'
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
-const { activeOrigin } = useZeusContext()
-const { getByApplication, updateStatus } = useSubscriptions()
+const { activeOrigin, applicationName } = useZeusContext()
+const { list, updateStatus } = useSubscriptions()
 const { list: listProfiles } = useProfiles()
 const toast = useToast()
 
-const applicationId = computed(() => activeOrigin.value?.application?.id ?? '')
+const profileId = computed(() => activeOrigin.value?.profile.id ?? '')
 const subscriptions = ref<Subscription[]>([])
 const profileNames = ref<Map<string, string>>(new Map())
 const loading = ref(true)
@@ -32,8 +32,10 @@ function profileName(id: string): string {
   return profileNames.value.get(id) ?? id
 }
 
+// Zeus ya no filtra por aplicación seleccionada (ver admin.vue) — se listan de una todas las
+// suscripciones de origin, de cualquier aplicación, con una columna que indica a cuál pertenece cada una.
 async function load() {
-  if (!applicationId.value || !activeOrigin.value) {
+  if (!profileId.value) {
     subscriptions.value = []
     loading.value = false
     return
@@ -41,7 +43,7 @@ async function load() {
   loading.value = true
   try {
     const [subs, allProfiles] = await Promise.all([
-      getByApplication(activeOrigin.value.profile.id, applicationId.value),
+      list(profileId.value),
       listProfiles(),
     ])
     subscriptions.value = subs.sort((a, b) => b.created_at.localeCompare(a.created_at))
@@ -53,7 +55,7 @@ async function load() {
   }
 }
 onMounted(load)
-watch(applicationId, load)
+watch(profileId, load)
 
 function statusColor(status: string) {
   if (status === 'active') return 'success'
@@ -63,10 +65,10 @@ function statusColor(status: string) {
 }
 
 async function suspend(s: Subscription) {
-  if (!activeOrigin.value) return
+  if (!profileId.value) return
   if (!confirm('¿Suspender esta suscripción?')) return
   try {
-    await updateStatus(activeOrigin.value.profile.id, s.id, { status: 'suspended' })
+    await updateStatus(profileId.value, s.id, { status: 'suspended' })
     toast.add({ title: 'Suscripción suspendida', color: 'success' })
     await load()
   } catch (e: unknown) {
@@ -80,7 +82,7 @@ async function suspend(s: Subscription) {
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-xl font-semibold text-gray-900">Suscripciones</h1>
-        <p class="text-sm text-gray-500">Suscripciones activas y pasadas de {{ activeOrigin?.application?.name ?? '—' }}</p>
+        <p class="text-sm text-gray-500">Suscripciones activas y pasadas de {{ activeOrigin?.profile.name }}, de todas las aplicaciones</p>
       </div>
       <USelectMenu v-model="statusFilter" :items="statusOptions" value-key="value" size="lg" class="w-48" />
     </div>
@@ -94,13 +96,14 @@ async function suspend(s: Subscription) {
       <p>No hay suscripciones para mostrar</p>
     </div>
 
-    <div v-else class="border border-gray-200 rounded-xl overflow-hidden">
+    <div v-else class="border border-gray-200 rounded-xl overflow-hidden overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="bg-gray-50 text-gray-500 text-left">
           <tr>
             <th class="px-4 py-3 font-medium">Perfil</th>
             <th class="px-4 py-3 font-medium">Monto</th>
             <th class="px-4 py-3 font-medium">Próx. cobro</th>
+            <th class="px-4 py-3 font-medium">Aplicación</th>
             <th class="px-4 py-3 font-medium">Estado</th>
             <th class="px-4 py-3 font-medium text-right">Acciones</th>
           </tr>
@@ -110,6 +113,7 @@ async function suspend(s: Subscription) {
             <td class="px-4 py-3 font-medium text-gray-900">{{ profileName(s.profile_id) }}</td>
             <td class="px-4 py-3 text-gray-500 tabular-nums">${{ (s.amount / 100).toFixed(2) }}</td>
             <td class="px-4 py-3 text-gray-500">{{ s.next_billing_date || '—' }}</td>
+            <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(s.application_id) }}</td>
             <td class="px-4 py-3">
               <UBadge :color="statusColor(s.status)" variant="subtle">{{ s.status }}</UBadge>
               <UBadge v-if="s.is_trial" color="info" variant="subtle" class="ml-1">trial</UBadge>

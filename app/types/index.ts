@@ -420,6 +420,7 @@ export type EstadoProforma = 'activa' | 'convertida' | 'anulada'
 export interface Proforma {
   id: string
   profile_id: string
+  application_id: string
   numero: string
   estado: EstadoProforma
   fecha_emision: string
@@ -434,6 +435,7 @@ export interface Proforma {
 export interface NotaCredito {
   id: string
   profile_id: string
+  application_id: string
   estado: EstadoDocumento
   info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
   info_nota_credito: {
@@ -449,6 +451,7 @@ export interface NotaCredito {
 export interface NotaDebito {
   id: string
   profile_id: string
+  application_id: string
   estado: EstadoDocumento
   info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
   info_nota_debito: {
@@ -463,6 +466,7 @@ export interface NotaDebito {
 export interface GuiaRemision {
   id: string
   profile_id: string
+  application_id: string
   estado: EstadoDocumento
   info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
   info_guia_remision: {
@@ -477,6 +481,7 @@ export interface GuiaRemision {
 export interface ComprobanteRetencion {
   id: string
   profile_id: string
+  application_id: string
   estado: EstadoDocumento
   info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
   info_comp_retencion: {
@@ -492,6 +497,7 @@ export interface ComprobanteRetencion {
 export interface LiquidacionCompra {
   id: string
   profile_id: string
+  application_id: string
   estado: EstadoDocumento
   info_tributaria: { estab: string, ptoEmi: string, secuencial?: string }
   info_liquidacion_compra: {

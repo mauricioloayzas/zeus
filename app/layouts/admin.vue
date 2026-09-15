@@ -5,7 +5,7 @@
 // que usa layout: 'admin' declara ['auth', 'origin'] en su propio definePageMeta.
 
 const { user, clearSession } = useAuth()
-const { origins, activeOrigin, isOwner, setActiveOrigin, clearContext } = useZeusContext()
+const { activeOrigin, isOwner, clearContext } = useZeusContext()
 
 const route = useRoute()
 const router = useRouter()
@@ -41,21 +41,6 @@ const navLinks = computed(() => {
   const links = isOwner.value ? [...ownerLinks, ...sharedLinks, ...ownerOnlyExtra] : sharedLinks
   return links.map((l) => ({ ...l, to: `/${urlName.value}/${l.slug}` }))
 })
-
-// El dropdown de la derecha elige APLICACIÓN (Clichín, Hayayaku...), no perfil — el perfil
-// "origin" detrás casi siempre es el mismo (compartido entre apps), lo que cambia es contra
-// qué application_id se filtran Perfiles/Planes/Suscripciones. Configuración y WhatsApp no
-// dependen de esto: son del perfil origin en sí, iguales para cualquier app elegida acá.
-const applicationItems = computed(() => [
-  origins.value.map((o) => ({
-    label: o.application?.name ?? o.profile.name,
-    icon: o.application?.id === activeOrigin.value?.application?.id ? 'i-heroicons-check' : 'i-heroicons-squares-2x2',
-    onSelect: () => {
-      setActiveOrigin(o)
-      router.push(`/${o.profile.url_name}/${isOwner.value ? 'aplicaciones' : 'suscripciones'}`)
-    },
-  })),
-])
 
 async function logout() {
   clearSession()
@@ -139,17 +124,9 @@ async function logout() {
           @click="sidebarOpen = true"
         />
         <div class="flex-1 flex justify-end">
-          <UDropdownMenu v-if="activeOrigin" :items="applicationItems" :content="{ align: 'end' }">
-            <UButton
-              variant="ghost"
-              color="primary"
-              icon="i-heroicons-squares-2x2"
-              trailing-icon="i-heroicons-chevron-down"
-              size="sm"
-            >
-              {{ activeOrigin.application?.name ?? activeOrigin.profile.name }}
-            </UButton>
-          </UDropdownMenu>
+          <p v-if="activeOrigin" class="text-sm text-gray-500">
+            {{ activeOrigin.profile.name }} · todas las aplicaciones
+          </p>
         </div>
       </div>
       <slot />

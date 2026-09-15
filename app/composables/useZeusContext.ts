@@ -46,10 +46,27 @@ export function useZeusContext() {
     return roles.value
   }
 
-  /** true solo para el rol Owner en el contexto activo — gatea Aplicaciones/Perfiles/WhatsApp/firma. */
-  const isOwner = computed(() => activeOrigin.value?.roleName === 'Owner')
+  // Zeus ya no tiene selector de aplicación (todas las apps de origin se ven unidas, ver
+  // admin.vue) — el rol efectivo del usuario se calcula sobre TODAS sus entradas de origins,
+  // no solo sobre activeOrigin (que ahora es nada más "el primer origin encontrado", usado
+  // por profile.id/profile.name, iguales en cualquier entrada porque el perfil es el mismo).
+  /** true si el usuario es Owner en cualquiera de las apps de origin — gatea Aplicaciones/Perfiles/WhatsApp/firma. */
+  const isOwner = computed(() => origins.value.some((o) => o.roleName === 'Owner'))
   /** El rol Contador solo ve Facturas/Contabilidad/Suscripciones (ver layouts/admin.vue). */
-  const isContador = computed(() => activeOrigin.value?.roleName === 'Contador')
+  const isContador = computed(() => !isOwner.value && origins.value.some((o) => o.roleName === 'Contador'))
+
+  /** Nombre de aplicación por id, para la columna "Aplicación" en las tablas de Perfiles/Planes/Suscripciones/Documentos. */
+  const applicationNameById = computed(() => {
+    const map = new Map<string, string>()
+    for (const o of origins.value) {
+      if (o.application) map.set(o.application.id, o.application.name)
+    }
+    return map
+  })
+  function applicationName(id: string | null | undefined): string {
+    if (!id) return '—'
+    return applicationNameById.value.get(id) ?? id
+  }
 
   async function checkOrigins(): Promise<OriginContext[]> {
     if (!user.value?.id) {
@@ -103,6 +120,7 @@ export function useZeusContext() {
     originsChecked,
     isOwner,
     isContador,
+    applicationName,
     checkOrigins,
     setActiveOrigin,
     clearContext,
