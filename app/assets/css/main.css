@@ -60,3 +60,32 @@
 body {
   background: var(--color-gray-50);
 }
+
+/*
+ * Nuxt UI trae su propio set de tokens semánticos (--ui-bg, --ui-text, --ui-border...) que
+ * usan los componentes (UCard, UModal, UDropdownMenu, UInput, toasts...) para pintarse — NO
+ * son los mismos que la escala "neutral" de arriba. En modo claro, --ui-bg queda fijo en #fff
+ * (no deriva de la escala), mientras que --ui-text-* sí deriva de --ui-color-neutral-*  — por
+ * eso esos componentes quedaban con fondo blanco de verdad pero texto ya oscurecido para fondo
+ * oscuro (gris claro sobre blanco, ilegible). Se pisan acá directo contra la paleta ya definida,
+ * en vez de activar el modo ".dark" real de Nuxt UI (que asume neutral-900 = el más oscuro de
+ * la escala — lo contrario de cómo se invirtió "gray"/"zinc" arriba para no tener que reescribir
+ * cada página).
+ */
+:root {
+  --ui-bg: var(--color-surface);
+  --ui-bg-muted: var(--color-gray-100);
+  --ui-bg-elevated: var(--color-gray-200);
+  --ui-bg-accented: var(--color-gray-300);
+  --ui-bg-inverted: var(--color-gray-900);
+  --ui-text: var(--color-gray-700);
+  --ui-text-muted: var(--color-gray-500);
+  --ui-text-dimmed: var(--color-gray-400);
+  --ui-text-toned: var(--color-gray-600);
+  --ui-text-highlighted: var(--color-gray-900);
+  --ui-text-inverted: var(--color-gray-50);
+  --ui-border: var(--color-gray-200);
+  --ui-border-muted: var(--color-gray-200);
+  --ui-border-accented: var(--color-gray-300);
+  --ui-border-inverted: var(--color-gray-900);
+}
