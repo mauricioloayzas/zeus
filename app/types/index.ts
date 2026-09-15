@@ -177,6 +177,86 @@ export interface CuentaContableInitResult {
   success?: boolean
 }
 
+export type AsientoContableOrigen = 'manual' | 'factura'
+
+export interface AsientoContableDetalle {
+  id: string
+  asiento_id: string
+  cuenta_id: string
+  debe: number
+  haber: number
+  created_at: string
+  updated_at: string | null
+}
+
+export interface AsientoContable {
+  id: string
+  profile_id: string
+  fecha: string
+  descripcion: string
+  origen: AsientoContableOrigen
+  detalles?: AsientoContableDetalle[]
+  created_at: string
+  updated_at: string | null
+}
+
+export interface AsientoContableLineaForm {
+  cuenta_id: string
+  debe: number
+  haber: number
+}
+
+export interface LineaEstadoFinanciero {
+  codigo: string
+  nombre: string
+  nivel: number
+  es_detalle?: boolean
+  es_subtotal?: boolean
+  valor: number
+}
+
+export interface BalanceGeneral {
+  fecha: string
+  total_activo: number
+  total_pasivo: number
+  total_patrimonio: number
+  resultado_acumulado: number
+  diferencia: number
+  cuadra: boolean
+  lineas: LineaEstadoFinanciero[]
+}
+
+export interface EstadoResultados {
+  anio: string
+  mes_desde: string
+  mes_hasta: string
+  ganancia_neta_periodo: number
+  resultado_integral_total: number
+  lineas: LineaEstadoFinanciero[]
+}
+
+export interface ReporteContablePdfResult {
+  formato: 'pdf'
+  filename: string
+  mime_type: string
+  contenido_base64: string
+  resumen: Record<string, unknown>
+}
+
+export interface EstadoFlujoEfectivo {
+  anio: string
+  mes_desde: string
+  mes_hasta: string
+  efectivo_inicial: number
+  movimiento_neto: number
+  efectivo_final: number
+  efectivo_actual_real: number
+  periodo_llega_hasta_hoy: boolean
+  diferencia: number
+  cuadra: boolean
+  lineas: LineaEstadoFinanciero[]
+}
+
 export interface MayorContable {
   id: string
   cuenta_id: string
