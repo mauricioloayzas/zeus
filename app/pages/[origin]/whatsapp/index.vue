@@ -175,13 +175,16 @@ const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   {
     key: 'reporte_ats_listo',
     label: 'ATS generado',
-    description: 'Aviso con el XML del ATS adjunto, al generarlo desde Reportes',
+    // Sin header de documento a propósito: Meta no admite XML como tipo de documento
+    // adjunto en plantillas de WhatsApp — bug real encontrado al intentar aprobar esta
+    // plantilla en Meta. El XML del ATS se sigue entregando por email; WhatsApp solo avisa.
+    description: 'Aviso de que el ATS ya se generó (el XML se envía por email, no por WhatsApp)',
     name: 'reporte_ats_listo',
     language: 'es',
     category: 'UTILITY',
-    body_text: 'Hola {{1}}, se generó el ATS de {{2}}. Lo encuentras adjunto en este mensaje.',
+    body_text: 'Hola {{1}}, se generó el ATS de {{2}}. Lo encuentras adjunto en tu correo.',
     variables_example: ['Juan', '2026-08'],
-    requires_document_header: true,
+    requires_document_header: false,
   },
 ]
 
