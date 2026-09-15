@@ -292,7 +292,7 @@ function templateStatusColor(status: string) {
 <template>
   <div class="max-w-3xl mx-auto py-8 px-4 space-y-6">
     <div>
-      <h1 class="text-xl font-semibold text-mauloasan-dark">WhatsApp</h1>
+      <h1 class="text-xl font-semibold text-gray-900">WhatsApp</h1>
       <p class="text-sm text-gray-500">Número y plantillas de {{ activeOrigin?.profile.name }} — es igual para todas las aplicaciones</p>
     </div>
 

@@ -158,7 +158,7 @@ async function generarReporteRetenciones(formato: 'csv' | 'pdf') {
 <template>
   <div class="max-w-4xl mx-auto py-8 px-4 space-y-6">
     <div>
-      <h1 class="text-xl font-semibold text-mauloasan-dark">Reportes</h1>
+      <h1 class="text-xl font-semibold text-gray-900">Reportes</h1>
       <p class="text-sm text-gray-500">ATS, Formulario 104 y descarga de comprobantes de {{ activeOrigin?.profile.name }}</p>
     </div>
 

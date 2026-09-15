@@ -100,7 +100,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
 <template>
   <div class="max-w-6xl mx-auto py-8 px-4">
     <div class="mb-6">
-      <h1 class="text-xl font-semibold text-mauloasan-dark">Documentos electrónicos</h1>
+      <h1 class="text-xl font-semibold text-gray-900">Documentos electrónicos</h1>
       <p class="text-sm text-gray-500">Comprobantes emitidos por {{ activeOrigin?.profile.name }}</p>
     </div>
 
@@ -110,7 +110,7 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
         :key="tab.key"
         class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 transition-colors"
         :class="activeTab === tab.key
-          ? 'border-brand-500 text-mauloasan-dark'
+          ? 'border-brand-500 text-gray-900'
           : 'border-transparent text-gray-400 hover:text-gray-600'"
         @click="activeTab = tab.key"
       >

@@ -344,7 +344,7 @@ async function descargarFlujoPdf() {
 <template>
   <div class="max-w-5xl mx-auto py-8 px-4">
     <div class="mb-6">
-      <h1 class="text-xl font-semibold text-mauloasan-dark">Contabilidad</h1>
+      <h1 class="text-xl font-semibold text-gray-900">Contabilidad</h1>
       <p class="text-sm text-gray-500">Libro mayor, asientos y reportes NIIF de {{ activeOrigin?.profile.name }}</p>
     </div>
 
@@ -353,7 +353,7 @@ async function descargarFlujoPdf() {
     </div>
     <div v-else-if="!cuentas.length" class="border border-gray-200 rounded-xl p-10 text-center mt-6">
       <UIcon name="i-heroicons-calculator" class="text-4xl text-gray-300 mx-auto mb-3" />
-      <h2 class="text-base font-medium text-mauloasan-dark mb-1">Todavía no se activó la contabilidad</h2>
+      <h2 class="text-base font-medium text-gray-900 mb-1">Todavía no se activó la contabilidad</h2>
       <p class="text-sm text-gray-500 max-w-sm mx-auto mb-5">
         Al activar, se clona el plan de cuentas oficial NIIF hacia {{ activeOrigin?.profile.name }}: queda
         listo para registrar asientos, mayorizar y llevar la contabilidad formal.
@@ -368,7 +368,7 @@ async function descargarFlujoPdf() {
           :key="tab.key"
           class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 transition-colors"
           :class="activeTab === tab.key
-            ? 'border-brand-500 text-mauloasan-dark'
+            ? 'border-brand-500 text-gray-900'
             : 'border-transparent text-gray-400 hover:text-gray-600'"
           @click="activeTab = tab.key"
         >
@@ -480,7 +480,7 @@ async function descargarFlujoPdf() {
         <section>
           <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
             <div>
-              <h2 class="text-base font-semibold text-mauloasan-dark">Balance General</h2>
+              <h2 class="text-base font-semibold text-gray-900">Balance General</h2>
               <p class="text-xs text-gray-500">Estado de Situación Financiera a una fecha de corte</p>
             </div>
             <div class="flex items-end gap-2">
@@ -535,7 +535,7 @@ async function descargarFlujoPdf() {
         <section>
           <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
             <div>
-              <h2 class="text-base font-semibold text-mauloasan-dark">Estado de Resultados</h2>
+              <h2 class="text-base font-semibold text-gray-900">Estado de Resultados</h2>
               <p class="text-xs text-gray-500">Estado de Resultado Integral del período</p>
             </div>
             <div class="flex items-end gap-2">
@@ -580,7 +580,7 @@ async function descargarFlujoPdf() {
         <section>
           <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
             <div>
-              <h2 class="text-base font-semibold text-mauloasan-dark">Estado de Flujos de Efectivo</h2>
+              <h2 class="text-base font-semibold text-gray-900">Estado de Flujos de Efectivo</h2>
               <p class="text-xs text-gray-500">Método indirecto, derivado de los cambios de saldo del período</p>
             </div>
             <div class="flex items-end gap-2">

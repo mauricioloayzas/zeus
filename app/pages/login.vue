@@ -106,7 +106,7 @@ async function handleSetNewPassword() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-white p-4">
+  <div class="min-h-screen flex items-center justify-center bg-gray-50 p-4">
     <div class="w-full max-w-md">
       <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 bg-mauloasan-dark">

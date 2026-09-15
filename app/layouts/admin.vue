@@ -76,7 +76,7 @@ async function logout() {
 
     <aside
       :class="[
-        'fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200',
+        'fixed inset-y-0 left-0 z-50 w-64 bg-surface border-r border-gray-200 flex flex-col transition-transform duration-200',
         'lg:relative lg:translate-x-0',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
       ]"
@@ -87,7 +87,7 @@ async function logout() {
             <UIcon name="i-heroicons-bolt" class="text-white text-xl" />
           </div>
           <div>
-            <h1 class="font-bold text-mauloasan-dark text-sm">Zeus</h1>
+            <h1 class="font-bold text-gray-900 text-sm">Zeus</h1>
             <p class="text-xs text-gray-500">Administración de plataforma</p>
           </div>
         </div>
@@ -98,7 +98,7 @@ async function logout() {
           v-for="link in navLinks"
           :key="link.to"
           :to="link.to"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-mauloasan-dark transition-colors"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
           active-class="bg-brand-500 text-white hover:bg-brand-500 hover:text-white"
           @click="sidebarOpen = false"
         >
@@ -111,7 +111,7 @@ async function logout() {
         <div class="flex items-center gap-3 mb-3 px-3">
           <UAvatar :alt="user?.name || user?.email" size="sm" class="bg-mauloasan-dark text-white" />
           <div class="min-w-0">
-            <p class="text-xs font-medium text-mauloasan-dark truncate">{{ user?.name || 'Usuario' }}</p>
+            <p class="text-xs font-medium text-gray-900 truncate">{{ user?.name || 'Usuario' }}</p>
             <p class="text-xs text-gray-500 truncate">{{ user?.email }}</p>
           </div>
         </div>
@@ -129,7 +129,7 @@ async function logout() {
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0">
-      <div class="bg-white border-b border-gray-200 px-4 sm:px-8 py-3 flex items-center gap-3">
+      <div class="bg-surface border-b border-gray-200 px-4 sm:px-8 py-3 flex items-center gap-3">
         <UButton
           class="lg:hidden"
           variant="ghost"

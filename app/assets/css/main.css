@@ -6,6 +6,14 @@
  * Nuxt UI la use como color primario en botones/focus/links) + el oscuro de marca (#282828,
  * como color plano, para superficies de marca puntuales como el sidebar/logo — no reemplaza
  * la escala "neutral" de Nuxt UI, que sigue siendo gris real para texto/bordes/chrome general).
+ *
+ * Paleta calcada de www.mauloasan.com (fondo #282828, texto #a4acc4, acento #ff914d — sacada
+ * directo de su CSS compilado): en vez de reeditar cada página, se remapean acá los tokens
+ * "gray" (usados en todo el markup propio) y "zinc" (usado por los componentes internos de
+ * Nuxt UI vía app.config.ts ui.colors.neutral) a esta paleta oscura — mismas clases utilitarias
+ * de siempre (bg-gray-50, text-gray-500, border-gray-200...), pero apuntando a colores oscuros.
+ * Los 4 bg-white de superficie (sidebar/header/login) se cambiaron a bg-surface, un tono más
+ * claro que el fondo de página para que las tarjetas "resalten" como en el sitio original.
  */
 @theme {
   --color-brand-50: #fff6f0;
@@ -22,4 +30,33 @@
 
   --color-mauloasan-dark: #282828;
   --color-mauloasan-orange: #ff914d;
+  --color-surface: #313131;
+
+  --color-gray-50: #282828;
+  --color-gray-100: #2e2e2e;
+  --color-gray-200: #3a3a3a;
+  --color-gray-300: #45454f;
+  --color-gray-400: #6e7180;
+  --color-gray-500: #a4acc4;
+  --color-gray-600: #b9c0d6;
+  --color-gray-700: #d3d7e6;
+  --color-gray-800: #e2e4ef;
+  --color-gray-900: #f5f6fa;
+  --color-gray-950: #ffffff;
+
+  --color-zinc-50: #282828;
+  --color-zinc-100: #2e2e2e;
+  --color-zinc-200: #3a3a3a;
+  --color-zinc-300: #45454f;
+  --color-zinc-400: #6e7180;
+  --color-zinc-500: #a4acc4;
+  --color-zinc-600: #b9c0d6;
+  --color-zinc-700: #d3d7e6;
+  --color-zinc-800: #e2e4ef;
+  --color-zinc-900: #f5f6fa;
+  --color-zinc-950: #ffffff;
+}
+
+body {
+  background: var(--color-gray-50);
 }
