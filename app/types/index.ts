@@ -91,6 +91,8 @@ export interface Plan {
   status: string
   created_at: string
   updated_at: string | null
+  /** true = adicional (ej. paquete ecommerce) — nunca se elige como plan base en el onboarding. */
+  is_addon?: boolean
 }
 
 export interface PlanForm {
@@ -99,6 +101,14 @@ export interface PlanForm {
   name: string
   description: string
   price: number
+  is_addon?: boolean
+}
+
+export interface CreateAddonForm {
+  plan_id: string
+  created_by: string
+  next_billing_date: string
+  amount?: number
 }
 
 export interface Subscription {
@@ -116,10 +126,17 @@ export interface Subscription {
   is_trial: boolean
   created_at: string
   updated_at: string | null
+  scheduled_amount: number | null
+  scheduled_amount_effective_date: string | null
 }
 
 export interface SubscriptionStatusForm {
   status: string
+}
+
+export interface ScheduleAmountChangeForm {
+  amount: number | null
+  effective_date?: string
 }
 
 export interface Factura {

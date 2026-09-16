@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import type { Subscription } from '~/types'
+import type { Subscription, Plan } from '~/types'
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { activeOrigin, applicationName } = useZeusContext()
-const { list, updateStatus } = useSubscriptions()
+const { user } = useAuth()
+const { list, updateStatus, scheduleAmountChange, createAddon } = useSubscriptions()
 const { list: listProfiles } = useProfiles()
+const { list: listPlans } = usePlans()
 const toast = useToast()
 
 const profileId = computed(() => activeOrigin.value?.profile.id ?? '')
 const subscriptions = ref<Subscription[]>([])
 const profileNames = ref<Map<string, string>>(new Map())
+const addonPlans = ref<Plan[]>([])
 const loading = ref(true)
 
 const statusOptions = [
@@ -42,12 +45,14 @@ async function load() {
   }
   loading.value = true
   try {
-    const [subs, allProfiles] = await Promise.all([
+    const [subs, allProfiles, allPlans] = await Promise.all([
       list(profileId.value),
       listProfiles(),
+      listPlans(profileId.value),
     ])
     subscriptions.value = subs.sort((a, b) => b.created_at.localeCompare(a.created_at))
     profileNames.value = new Map(allProfiles.map((p) => [p.id, p.name]))
+    addonPlans.value = allPlans.filter((p) => p.is_addon && p.status === 'active')
   } catch (e: unknown) {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
   } finally {
@@ -73,6 +78,95 @@ async function suspend(s: Subscription) {
     await load()
   } catch (e: unknown) {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  }
+}
+
+// --- Programar cambio de precio (cupón que sube a precio normal, o adicional que arranca
+// más adelante) — process.php lo aplica solo en el próximo cobro que caiga en o después de
+// la fecha indicada, no cobra nada acá.
+const showScheduleModal = ref(false)
+const scheduling = ref(false)
+const schedulingFor = ref<Subscription | null>(null)
+const scheduleAmountUsd = ref(0)
+const scheduleDate = ref('')
+
+function openSchedule(s: Subscription) {
+  schedulingFor.value = s
+  scheduleAmountUsd.value = s.scheduled_amount ? s.scheduled_amount / 100 : s.amount / 100
+  scheduleDate.value = s.scheduled_amount_effective_date ?? ''
+  showScheduleModal.value = true
+}
+
+async function handleSchedule() {
+  if (!profileId.value || !schedulingFor.value || !scheduleDate.value || !(scheduleAmountUsd.value > 0)) return
+  scheduling.value = true
+  try {
+    await scheduleAmountChange(profileId.value, schedulingFor.value.id, {
+      amount: Math.round(scheduleAmountUsd.value * 100),
+      effective_date: scheduleDate.value,
+    })
+    toast.add({ title: 'Cambio de precio programado', color: 'success' })
+    showScheduleModal.value = false
+    await load()
+  } catch (e: unknown) {
+    toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  } finally {
+    scheduling.value = false
+  }
+}
+
+async function cancelSchedule() {
+  if (!profileId.value || !schedulingFor.value) return
+  scheduling.value = true
+  try {
+    await scheduleAmountChange(profileId.value, schedulingFor.value.id, { amount: null })
+    toast.add({ title: 'Cambio programado cancelado', color: 'success' })
+    showScheduleModal.value = false
+    await load()
+  } catch (e: unknown) {
+    toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  } finally {
+    scheduling.value = false
+  }
+}
+
+// --- Agregar adicional (ej. paquete ecommerce) — crea una SEGUNDA suscripción reusando el
+// token de la base, con su propia fecha de arranque (hoy o más adelante).
+const showAddonModal = ref(false)
+const addingAddon = ref(false)
+const addonBaseFor = ref<Subscription | null>(null)
+const addonPlanId = ref('')
+const addonStartDate = ref('')
+
+const addonPlanOptions = computed(() =>
+  addonPlans.value
+    .filter((p) => p.application_id === addonBaseFor.value?.application_id)
+    .map((p) => ({ label: `${p.name} — $${p.price.toFixed(2)}`, value: p.id }))
+)
+
+function openAddon(s: Subscription) {
+  addonBaseFor.value = s
+  addonPlanId.value = ''
+  addonStartDate.value = new Date().toISOString().slice(0, 10)
+  showAddonModal.value = true
+}
+
+async function handleAddAddon() {
+  if (!profileId.value || !addonBaseFor.value || !addonPlanId.value || !addonStartDate.value || !user.value?.id) return
+  addingAddon.value = true
+  try {
+    await createAddon(profileId.value, addonBaseFor.value.id, {
+      plan_id: addonPlanId.value,
+      created_by: user.value.id,
+      next_billing_date: addonStartDate.value,
+    })
+    toast.add({ title: 'Adicional agregado', color: 'success' })
+    showAddonModal.value = false
+    await load()
+  } catch (e: unknown) {
+    toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  } finally {
+    addingAddon.value = false
   }
 }
 </script>
@@ -111,14 +205,32 @@ async function suspend(s: Subscription) {
         <tbody class="divide-y divide-gray-100">
           <tr v-for="s in filtered" :key="s.id" class="hover:bg-gray-50">
             <td class="px-4 py-3 font-medium text-gray-900">{{ profileName(s.profile_id) }}</td>
-            <td class="px-4 py-3 text-gray-500 tabular-nums">${{ (s.amount / 100).toFixed(2) }}</td>
+            <td class="px-4 py-3 text-gray-500 tabular-nums">
+              ${{ (s.amount / 100).toFixed(2) }}
+              <span v-if="s.scheduled_amount" class="block text-xs text-brand-500">
+                → ${{ (s.scheduled_amount / 100).toFixed(2) }} desde {{ s.scheduled_amount_effective_date }}
+              </span>
+            </td>
             <td class="px-4 py-3 text-gray-500">{{ s.next_billing_date || '—' }}</td>
             <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(s.application_id) }}</td>
             <td class="px-4 py-3">
               <UBadge :color="statusColor(s.status)" variant="subtle">{{ s.status }}</UBadge>
               <UBadge v-if="s.is_trial" color="info" variant="subtle" class="ml-1">trial</UBadge>
             </td>
-            <td class="px-4 py-3 text-right">
+            <td class="px-4 py-3 text-right space-x-1">
+              <UButton size="xs" variant="ghost" color="neutral" icon="i-heroicons-clock" @click="openSchedule(s)">
+                Programar precio
+              </UButton>
+              <UButton
+                v-if="s.status === 'active' && addonPlans.some((p) => p.application_id === s.application_id)"
+                size="xs"
+                variant="ghost"
+                color="neutral"
+                icon="i-heroicons-plus-circle"
+                @click="openAddon(s)"
+              >
+                Agregar adicional
+              </UButton>
               <UButton
                 v-if="s.status === 'active'"
                 size="xs"
@@ -134,5 +246,56 @@ async function suspend(s: Subscription) {
         </tbody>
       </table>
     </div>
+
+    <UModal v-model:open="showScheduleModal" title="Programar cambio de precio">
+      <template #body>
+        <p class="text-sm text-gray-500 mb-4">
+          Se aplica solo, sin cobrar nada ahora — en el próximo cobro que caiga en o después de la
+          fecha elegida, este pasa a ser el nuevo monto de la suscripción de {{ schedulingFor ? profileName(schedulingFor.profile_id) : '' }}.
+        </p>
+        <form class="space-y-4" @submit.prevent="handleSchedule">
+          <UFormField label="Nuevo monto (USD)" name="amount">
+            <UInput v-model.number="scheduleAmountUsd" type="number" step="0.01" min="0.01" required size="lg" class="w-full" />
+          </UFormField>
+          <UFormField label="Vigente desde" name="effective_date">
+            <UInput v-model="scheduleDate" type="date" required size="lg" class="w-full" />
+          </UFormField>
+          <UButton type="submit" color="primary" block size="lg" :loading="scheduling">
+            Programar
+          </UButton>
+          <UButton
+            v-if="schedulingFor?.scheduled_amount"
+            type="button"
+            variant="ghost"
+            color="error"
+            block
+            :loading="scheduling"
+            @click="cancelSchedule"
+          >
+            Cancelar cambio programado
+          </UButton>
+        </form>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showAddonModal" title="Agregar adicional">
+      <template #body>
+        <p class="text-sm text-gray-500 mb-4">
+          Crea una suscripción aparte para {{ addonBaseFor ? profileName(addonBaseFor.profile_id) : '' }}, reusando la
+          misma tarjeta ya guardada — se puede cancelar sin afectar el plan base.
+        </p>
+        <form class="space-y-4" @submit.prevent="handleAddAddon">
+          <UFormField label="Adicional" name="plan_id">
+            <USelectMenu v-model="addonPlanId" :items="addonPlanOptions" value-key="value" size="lg" class="w-full" />
+          </UFormField>
+          <UFormField label="Empieza a cobrarse desde" name="next_billing_date">
+            <UInput v-model="addonStartDate" type="date" required size="lg" class="w-full" />
+          </UFormField>
+          <UButton type="submit" color="primary" block size="lg" :loading="addingAddon" :disabled="!addonPlanId">
+            Agregar
+          </UButton>
+        </form>
+      </template>
+    </UModal>
   </div>
 </template>

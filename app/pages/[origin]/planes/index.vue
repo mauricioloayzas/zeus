@@ -46,7 +46,7 @@ function typeLabel(t: string) {
 const showModal = ref(false)
 const editing = ref<Plan | null>(null)
 const saving = ref(false)
-const form = reactive({ name: '', description: '', type: 'monthly', price: 0, application_id: '' })
+const form = reactive({ name: '', description: '', type: 'monthly', price: 0, application_id: '', is_addon: false })
 
 function resetForm() {
   form.name = ''
@@ -54,6 +54,7 @@ function resetForm() {
   form.type = 'monthly'
   form.price = 0
   form.application_id = applicationOptions.value[0]?.value ?? ''
+  form.is_addon = false
 }
 
 function openCreate() {
@@ -95,6 +96,7 @@ async function handleSubmit() {
         name: form.name,
         description: form.description,
         price: form.price,
+        is_addon: form.is_addon,
       })
       toast.add({ title: 'Plan creado', color: 'success' })
     }
@@ -157,7 +159,10 @@ async function toggleStatus(p: Plan) {
         </thead>
         <tbody class="divide-y divide-gray-100">
           <tr v-for="p in plans" :key="p.id" class="hover:bg-gray-50">
-            <td class="px-4 py-3 font-medium text-gray-900">{{ p.name }}</td>
+            <td class="px-4 py-3 font-medium text-gray-900">
+              {{ p.name }}
+              <UBadge v-if="p.is_addon" color="info" variant="subtle" size="sm" class="ml-1">adicional</UBadge>
+            </td>
             <td class="px-4 py-3 text-gray-500">{{ typeLabel(p.type) }}</td>
             <td class="px-4 py-3 text-gray-500 tabular-nums">${{ p.price.toFixed(2) }}</td>
             <td class="px-4 py-3 text-gray-500 text-xs">{{ applicationName(p.application_id) }}</td>
@@ -195,6 +200,12 @@ async function toggleStatus(p: Plan) {
               <UInput v-model.number="form.price" type="number" step="0.01" min="0" required size="lg" class="w-full" />
             </UFormField>
           </div>
+          <UCheckbox
+            v-if="!editing"
+            v-model="form.is_addon"
+            label="Es un adicional (ej. paquete ecommerce)"
+            description="No se ofrece como plan base en el onboarding — se agrega después sobre una suscripción ya activa, desde Suscripciones."
+          />
           <UButton type="submit" color="primary" block size="lg" :loading="saving">
             {{ editing ? 'Guardar cambios' : 'Crear plan' }}
           </UButton>
