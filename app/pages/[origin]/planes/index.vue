@@ -1,11 +1,25 @@
 <script setup lang="ts">
-import type { Plan } from '~/types'
+import type { Plan, PlanDetail } from '~/types'
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { activeOrigin, origins, applicationName } = useZeusContext()
 const { list, create, update, updateStatus } = usePlans()
+const { getByPlanId, create: createPlanDetail, update: updatePlanDetail } = usePlanDetails()
 const toast = useToast()
+
+// Vocabulario de features conocido (no hay un enum en el backend — son strings libres que se
+// chequean con planFeatures.includes('xxx') en caja-registradora/frontend, confirmado leyendo
+// layouts/admin.vue y escaneando prod_collector_plan_details). Se ofrece como acceso rápido,
+// pero igual se puede escribir cualquier otra clave a mano.
+const KNOWN_FEATURES = [
+  'dashboard', 'modulos_verticales', 'links_de_pago', 'envio_whatsapp', 'envio_email',
+  'facturacion_web', 'facturacion_movil', 'firma_digital', 'facturacion_recurrente_automatizada',
+  'reportes_basicos_ventas', 'reportes', 'reportes_financieros', 'inventario',
+  'agendamiento_publico', 'gestion_casos_anticipos_hitos', 'equipo_staff', 'multiusuario',
+  'facturas', 'proformas', 'notas-credito', 'notas-debito', 'guias-remision', 'retenciones',
+  'liquidaciones-compra', 'contabilidad', 'datos_sensibles_salud', 'historial_medico',
+]
 
 const profileId = computed(() => activeOrigin.value?.profile.id ?? '')
 const plans = ref<Plan[]>([])
@@ -48,6 +62,25 @@ const editing = ref<Plan | null>(null)
 const saving = ref(false)
 const form = reactive({ name: '', description: '', type: 'monthly', price: 0, application_id: '', is_addon: false })
 
+// --- Features del plan (plan-details) ---
+const loadingFeatures = ref(false)
+const existingPlanDetail = ref<PlanDetail | null>(null)
+const features = ref<string[]>([])
+const newFeatureInput = ref('')
+
+function addFeature(key: string) {
+  const trimmed = key.trim()
+  if (!trimmed || features.value.includes(trimmed)) return
+  features.value.push(trimmed)
+}
+function addFeatureFromInput() {
+  addFeature(newFeatureInput.value)
+  newFeatureInput.value = ''
+}
+function removeFeature(key: string) {
+  features.value = features.value.filter((f) => f !== key)
+}
+
 function resetForm() {
   form.name = ''
   form.description = ''
@@ -55,6 +88,9 @@ function resetForm() {
   form.price = 0
   form.application_id = applicationOptions.value[0]?.value ?? ''
   form.is_addon = false
+  existingPlanDetail.value = null
+  features.value = []
+  newFeatureInput.value = ''
 }
 
 function openCreate() {
@@ -63,14 +99,36 @@ function openCreate() {
   showModal.value = true
 }
 
-function openEdit(p: Plan) {
+async function openEdit(p: Plan) {
   editing.value = p
   form.name = p.name
   form.description = p.description
   form.type = p.type
   form.price = p.price
   form.application_id = p.application_id
+  existingPlanDetail.value = null
+  features.value = []
+  newFeatureInput.value = ''
   showModal.value = true
+
+  loadingFeatures.value = true
+  try {
+    const detail = await getByPlanId(p.id)
+    existingPlanDetail.value = detail
+    features.value = detail?.features ? [...detail.features] : []
+  } catch (e: unknown) {
+    toast.add({ title: 'Error cargando las features del plan', description: (e as Error).message, color: 'error' })
+  } finally {
+    loadingFeatures.value = false
+  }
+}
+
+async function syncFeatures(planId: string, applicationId: string) {
+  if (existingPlanDetail.value) {
+    await updatePlanDetail(planId, existingPlanDetail.value.id, { features: features.value })
+  } else if (features.value.length) {
+    await createPlanDetail(planId, { application_id: applicationId, features: features.value })
+  }
 }
 
 async function handleSubmit() {
@@ -83,6 +141,7 @@ async function handleSubmit() {
         description: form.description,
         price: form.price,
       })
+      await syncFeatures(editing.value.id, editing.value.application_id)
       toast.add({ title: 'Plan actualizado', color: 'success' })
     } else {
       if (!form.application_id) {
@@ -90,7 +149,7 @@ async function handleSubmit() {
         saving.value = false
         return
       }
-      await create(profileId.value, {
+      const created = await create(profileId.value, {
         application_id: form.application_id,
         type: form.type,
         name: form.name,
@@ -98,6 +157,7 @@ async function handleSubmit() {
         price: form.price,
         is_addon: form.is_addon,
       })
+      await syncFeatures(created.id, form.application_id)
       toast.add({ title: 'Plan creado', color: 'success' })
     }
     showModal.value = false
@@ -206,6 +266,49 @@ async function toggleStatus(p: Plan) {
             label="Es un adicional (ej. paquete ecommerce)"
             description="No se ofrece como plan base en el onboarding — se agrega después sobre una suscripción ya activa, desde Suscripciones."
           />
+
+          <UFormField label="Features" name="features" help="Definen qué puede usar quien tenga este plan — se chequean por clave en toda la app.">
+            <div v-if="loadingFeatures" class="flex justify-center py-4">
+              <UIcon name="i-heroicons-arrow-path" class="animate-spin text-xl text-gray-400" />
+            </div>
+            <template v-else>
+              <div v-if="features.length" class="flex flex-wrap gap-1.5 mb-2">
+                <UBadge v-for="f in features" :key="f" color="primary" variant="subtle" class="gap-1">
+                  {{ f }}
+                  <button type="button" class="hover:opacity-70" @click="removeFeature(f)">
+                    <UIcon name="i-heroicons-x-mark" class="text-xs" />
+                  </button>
+                </UBadge>
+              </div>
+              <p v-else class="text-xs text-gray-400 mb-2">Sin features todavía — este plan no desbloquea nada.</p>
+
+              <div class="flex gap-2 mb-2">
+                <UInput
+                  v-model="newFeatureInput"
+                  placeholder="ej. agendamiento_publico"
+                  size="sm"
+                  class="flex-1"
+                  @keydown.enter.prevent="addFeatureFromInput"
+                />
+                <UButton size="sm" variant="outline" color="neutral" icon="i-heroicons-plus" @click="addFeatureFromInput">
+                  Agregar
+                </UButton>
+              </div>
+
+              <div class="flex flex-wrap gap-1">
+                <button
+                  v-for="k in KNOWN_FEATURES.filter((k) => !features.includes(k))"
+                  :key="k"
+                  type="button"
+                  class="text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-brand-400 hover:text-brand-500 transition-colors"
+                  @click="addFeature(k)"
+                >
+                  + {{ k }}
+                </button>
+              </div>
+            </template>
+          </UFormField>
+
           <UButton type="submit" color="primary" block size="lg" :loading="saving">
             {{ editing ? 'Guardar cambios' : 'Crear plan' }}
           </UButton>

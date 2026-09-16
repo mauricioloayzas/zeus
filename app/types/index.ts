@@ -104,6 +104,20 @@ export interface PlanForm {
   is_addon?: boolean
 }
 
+export interface PlanDetailLimits {
+  [key: string]: unknown
+}
+
+export interface PlanDetail {
+  id: string
+  plan_id: string
+  application_id: string
+  features: string[]
+  limits: PlanDetailLimits
+  created_at: string
+  updated_at: string | null
+}
+
 export interface CreateAddonForm {
   plan_id: string
   created_by: string
