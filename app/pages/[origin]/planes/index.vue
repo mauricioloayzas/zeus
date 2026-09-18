@@ -19,7 +19,7 @@ const KNOWN_FEATURES = [
   'agendamiento_publico', 'gestion_casos_anticipos_hitos', 'equipo_staff', 'multiusuario',
   'facturas', 'proformas', 'notas-credito', 'notas-debito', 'guias-remision', 'retenciones',
   'liquidaciones-compra', 'contabilidad', 'datos_sensibles_salud', 'historial_medico',
-  'tienda_publica',
+  'tienda_publica', 'ordenes_trabajo',
 ]
 
 const profileId = computed(() => activeOrigin.value?.profile.id ?? '')
