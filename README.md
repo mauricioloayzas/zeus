@@ -36,3 +36,19 @@ Conectar un repo de GitHub real (para que cada push redeploye solo) es un pendie
 Dominio: `zeus.mauloasan.com` — asociación ya pedida en Amplify, falta agregar los
 registros CNAME en el DNS real de mauloasan.com (ver conversación/PR para los valores
 exactos, cambian por deploy).
+
+## Sitio web (mauloasan.com)
+
+La sección **Sitio web** (solo Owner) edita el contenido público de `mauloasan-nuxt`:
+información, servicios, reseñas, skills, contacto, Términos y Privacidad. Los documentos
+viven en la tabla DynamoDB `{stage}_orchestrator_site_content` (PK `site_id`, SK `key`, valor
+en `data_json`) y se leen/escriben vía `GET /site-content/{site}` (público) y
+`PUT /site-content/{site}/{key}` (admin de plataforma) del orchestrator. El sitio los consume
+con caché de 60 s y, si la API no responde o falta un documento, usa el contenido de
+`server/utils/database.js` como respaldo.
+
+Puesta en marcha (una sola vez por stage):
+1. `bob-contruye`: `php dev-scripts/DynamoDB/DDL/siteContentTable.php --environment <stage> --prefix orchestrator`
+2. `orchestrator`: desplegar (nuevas funciones `site-content-*` y variable `DYNAMODB_TABLE_SITE_CONTENT`)
+3. `mauloasan-nuxt`: `npm run seed:<stage>` para cargar el contenido actual, y definir
+   `NUXT_API_SITE_CONTENT` (URL base del orchestrator) en su `.env` antes de `deploy:<stage>`

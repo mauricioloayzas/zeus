@@ -21,6 +21,7 @@ const ownerLinks = [
   { label: 'Aplicaciones', icon: 'i-heroicons-squares-2x2', slug: 'aplicaciones' },
   { label: 'Perfiles', icon: 'i-heroicons-user-group', slug: 'perfiles' },
   { label: 'Planes', icon: 'i-heroicons-tag', slug: 'planes' },
+  { label: 'Sitio web', icon: 'i-heroicons-globe-alt', slug: 'sitio' },
 ]
 // Documentos electrónicos y Contabilidad: mismo criterio que caja-registradora (secciones
 // separadas), visibles para cualquiera con acceso a origin — no solo Owner.

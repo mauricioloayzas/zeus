@@ -562,3 +562,39 @@ export interface PuntoEmisionForm {
   descripcion?: string | null
   status?: PuntoEmisionStatus
 }
+
+// Contenido editable del sitio público (mauloasan.com) — ver useSiteContent.ts.
+export interface SiteDocument<T = unknown> {
+  data: T
+  updated_at: string | null
+}
+
+export interface SiteInformation {
+  name: string
+  about_content: string
+  born_date: string
+  phone: string
+  nationality: string
+  language: string
+  email: string
+  address: string
+  freelance_status: string
+  social_links: Record<string, string>
+  brand_image: string
+  about_image: string
+  about_image_lg: string
+  cvfile: string
+  [extra: string]: unknown
+}
+
+export interface SiteContactInfo {
+  phone_numbers: string[]
+  email_address: string[]
+  address: string
+}
+
+export interface SiteLegalDocument {
+  title: string
+  lastUpdated: string
+  html: string
+}
