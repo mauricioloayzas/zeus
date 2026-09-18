@@ -3,9 +3,9 @@ import type { Subscription, Plan } from '~/types'
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
-const { activeOrigin, applicationName } = useZeusContext()
+const { activeOrigin, origins, applicationName } = useZeusContext()
 const { user } = useAuth()
-const { list, updateStatus, scheduleAmountChange, createAddon, grantAddon, extendGrant } = useSubscriptions()
+const { getByApplication, updateStatus, scheduleAmountChange, createAddon, grantAddon, extendGrant } = useSubscriptions()
 const { list: listProfiles } = useProfiles()
 const { list: listPlans } = usePlans()
 const toast = useToast()
@@ -37,6 +37,13 @@ function profileName(id: string): string {
 
 // Zeus ya no filtra por aplicación seleccionada (ver admin.vue) — se listan de una todas las
 // suscripciones de origin, de cualquier aplicación, con una columna que indica a cuál pertenece cada una.
+//
+// Bug real encontrado: esto antes llamaba a list(origin_id), que busca subscriptions con
+// profile_id === el propio perfil de origin — pero las suscripciones son de CADA CLIENTE
+// (su propio profile_id), nunca de origin. Por eso la lista siempre salía vacía. El fix es
+// usar getByApplication (GSI por application_id, ya existía en el backend) por cada
+// aplicación que administra el usuario — un mismo usuario puede tener origins distintos
+// (distinto profile.id) para distintas apps (ej. Clichín y otra), así que se recorren todos.
 async function load() {
   if (!profileId.value) {
     subscriptions.value = []
@@ -45,12 +52,13 @@ async function load() {
   }
   loading.value = true
   try {
-    const [subs, allProfiles, allPlans] = await Promise.all([
-      list(profileId.value),
+    const appOrigins = origins.value.filter((o) => o.application?.id)
+    const [subsByApp, allProfiles, allPlans] = await Promise.all([
+      Promise.all(appOrigins.map((o) => getByApplication(o.profile.id, o.application!.id))),
       listProfiles(),
       listPlans(profileId.value),
     ])
-    subscriptions.value = subs.sort((a, b) => b.created_at.localeCompare(a.created_at))
+    subscriptions.value = subsByApp.flat().sort((a, b) => b.created_at.localeCompare(a.created_at))
     profileNames.value = new Map(allProfiles.map((p) => [p.id, p.name]))
     addonPlans.value = allPlans.filter((p) => p.is_addon && p.status === 'active')
   } catch (e: unknown) {

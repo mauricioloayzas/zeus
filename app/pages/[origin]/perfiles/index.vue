@@ -4,7 +4,7 @@ import type { Profile, ProfileType } from '~/types'
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { list, create, update, updateStatus } = useProfiles()
-const { list: listSubscriptions } = useSubscriptions()
+const { getByApplication } = useSubscriptions()
 const { activeOrigin, applicationName } = useZeusContext()
 const toast = useToast()
 
@@ -43,9 +43,15 @@ function profileApplication(id: string): string {
 async function load() {
   loading.value = true
   try {
+    // Bug real encontrado: listSubscriptions(origin_id) busca subscriptions con
+    // profile_id === el propio perfil de origin — pero cada suscripción es de SU cliente,
+    // nunca de origin, así que este mapa siempre salía vacío. Fix: getByApplication (GSI por
+    // application_id), igual que en suscripciones/index.vue.
+    const originId = activeOrigin.value?.profile.id
+    const appId = activeOrigin.value?.application?.id
     const [profilesRes, subs] = await Promise.all([
       list(),
-      activeOrigin.value ? listSubscriptions(activeOrigin.value.profile.id) : Promise.resolve([]),
+      originId && appId ? getByApplication(originId, appId) : Promise.resolve([]),
     ])
     allProfiles.value = profilesRes
     applicationIdByProfileId.value = new Map(subs.map((s) => [s.profile_id, s.application_id]))
