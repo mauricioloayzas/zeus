@@ -13,6 +13,7 @@ const toast = useToast()
 const profileId = computed(() => activeOrigin.value?.profile.id ?? '')
 const subscriptions = ref<Subscription[]>([])
 const profileNames = ref<Map<string, string>>(new Map())
+const planNames = ref<Map<string, string>>(new Map())
 const addonPlans = ref<Plan[]>([])
 const loading = ref(true)
 
@@ -33,6 +34,10 @@ const filtered = computed(() => {
 
 function profileName(id: string): string {
   return profileNames.value.get(id) ?? id
+}
+
+function planName(id: string): string {
+  return planNames.value.get(id) ?? '—'
 }
 
 // Zeus ya no filtra por aplicación seleccionada (ver admin.vue) — se listan de una todas las
@@ -60,6 +65,7 @@ async function load() {
     ])
     subscriptions.value = subsByApp.flat().sort((a, b) => b.created_at.localeCompare(a.created_at))
     profileNames.value = new Map(allProfiles.map((p) => [p.id, p.name]))
+    planNames.value = new Map(allPlans.map((p) => [p.id, p.name]))
     addonPlans.value = allPlans.filter((p) => p.is_addon && p.status === 'active')
   } catch (e: unknown) {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
@@ -272,6 +278,7 @@ async function handleExtend() {
         <thead class="bg-gray-50 text-gray-500 text-left">
           <tr>
             <th class="px-4 py-3 font-medium">Perfil</th>
+            <th class="px-4 py-3 font-medium">Plan</th>
             <th class="px-4 py-3 font-medium">Monto</th>
             <th class="px-4 py-3 font-medium">Próx. cobro</th>
             <th class="px-4 py-3 font-medium">Aplicación</th>
@@ -282,6 +289,7 @@ async function handleExtend() {
         <tbody class="divide-y divide-gray-100">
           <tr v-for="s in filtered" :key="s.id" class="hover:bg-gray-50">
             <td class="px-4 py-3 font-medium text-gray-900">{{ profileName(s.profile_id) }}</td>
+            <td class="px-4 py-3 text-gray-500">{{ planName(s.plan_id) }}</td>
             <td class="px-4 py-3 text-gray-500 tabular-nums">
               ${{ (s.amount / 100).toFixed(2) }}
               <span v-if="s.scheduled_amount" class="block text-xs text-brand-500">
