@@ -5,7 +5,7 @@ definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { activeOrigin, applicationName } = useZeusContext()
 const { user } = useAuth()
-const { list, updateStatus, scheduleAmountChange, createAddon } = useSubscriptions()
+const { list, updateStatus, scheduleAmountChange, createAddon, grantAddon, extendGrant } = useSubscriptions()
 const { list: listProfiles } = useProfiles()
 const { list: listPlans } = usePlans()
 const toast = useToast()
@@ -169,6 +169,75 @@ async function handleAddAddon() {
     addingAddon.value = false
   }
 }
+
+// --- Regalar add-on (cortesía) — igual que "Agregar adicional" pero sin exigir tarjeta
+// tokenizada en la base, para clientes que siguen en trial. Requiere fecha de fin (no hay
+// "gratis para siempre" implícito).
+const showGrantAddonModal = ref(false)
+const grantingAddon = ref(false)
+const grantAddonBaseFor = ref<Subscription | null>(null)
+const grantAddonPlanId = ref('')
+const grantAddonEndDate = ref('')
+
+const grantAddonPlanOptions = computed(() =>
+  addonPlans.value
+    .filter((p) => p.application_id === grantAddonBaseFor.value?.application_id)
+    .map((p) => ({ label: `${p.name} — $${p.price.toFixed(2)}`, value: p.id }))
+)
+
+function openGrantAddon(s: Subscription) {
+  grantAddonBaseFor.value = s
+  grantAddonPlanId.value = ''
+  grantAddonEndDate.value = ''
+  showGrantAddonModal.value = true
+}
+
+async function handleGrantAddon() {
+  if (!profileId.value || !grantAddonBaseFor.value || !grantAddonPlanId.value || !grantAddonEndDate.value || !user.value?.id) return
+  grantingAddon.value = true
+  try {
+    await grantAddon(profileId.value, grantAddonBaseFor.value.id, {
+      plan_id: grantAddonPlanId.value,
+      created_by: user.value.id,
+      end_date: grantAddonEndDate.value,
+    })
+    toast.add({ title: 'Add-on regalado', description: `Activo hasta ${grantAddonEndDate.value}`, color: 'success' })
+    showGrantAddonModal.value = false
+    await load()
+  } catch (e: unknown) {
+    toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  } finally {
+    grantingAddon.value = false
+  }
+}
+
+// --- Extender (cortesía) — mueve end_date/next_billing_date de una suscripción activa hacia
+// adelante, sin tocar su método de pago. Sirve tanto para el plan base como para un add-on.
+const showExtendModal = ref(false)
+const extending = ref(false)
+const extendFor = ref<Subscription | null>(null)
+const extendEndDate = ref('')
+
+function openExtend(s: Subscription) {
+  extendFor.value = s
+  extendEndDate.value = s.next_billing_date ?? ''
+  showExtendModal.value = true
+}
+
+async function handleExtend() {
+  if (!profileId.value || !extendFor.value || !extendEndDate.value) return
+  extending.value = true
+  try {
+    await extendGrant(profileId.value, extendFor.value.id, extendEndDate.value)
+    toast.add({ title: 'Suscripción extendida', description: `Activa hasta ${extendEndDate.value}`, color: 'success' })
+    showExtendModal.value = false
+    await load()
+  } catch (e: unknown) {
+    toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  } finally {
+    extending.value = false
+  }
+}
 </script>
 
 <template>
@@ -232,6 +301,26 @@ async function handleAddAddon() {
                 Agregar adicional
               </UButton>
               <UButton
+                v-if="s.status === 'active' && addonPlans.some((p) => p.application_id === s.application_id)"
+                size="xs"
+                variant="ghost"
+                color="neutral"
+                icon="i-heroicons-gift"
+                @click="openGrantAddon(s)"
+              >
+                Regalar add-on
+              </UButton>
+              <UButton
+                v-if="s.status === 'active'"
+                size="xs"
+                variant="ghost"
+                color="neutral"
+                icon="i-heroicons-calendar-days"
+                @click="openExtend(s)"
+              >
+                Extender
+              </UButton>
+              <UButton
                 v-if="s.status === 'active'"
                 size="xs"
                 variant="ghost"
@@ -293,6 +382,45 @@ async function handleAddAddon() {
           </UFormField>
           <UButton type="submit" color="primary" block size="lg" :loading="addingAddon" :disabled="!addonPlanId">
             Agregar
+          </UButton>
+        </form>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showGrantAddonModal" title="Regalar add-on">
+      <template #body>
+        <p class="text-sm text-gray-500 mb-4">
+          Cortesía para {{ grantAddonBaseFor ? profileName(grantAddonBaseFor.profile_id) : '' }} —
+          no exige tarjeta tokenizada en la base (sirve aunque siga en trial). Queda activo
+          hasta la fecha que elijas; si el cliente agrega una tarjeta real después, se puede
+          seguir cobrando normalmente desde ahí.
+        </p>
+        <form class="space-y-4" @submit.prevent="handleGrantAddon">
+          <UFormField label="Add-on" name="plan_id">
+            <USelectMenu v-model="grantAddonPlanId" :items="grantAddonPlanOptions" value-key="value" size="lg" class="w-full" />
+          </UFormField>
+          <UFormField label="Activo hasta" name="end_date">
+            <UInput v-model="grantAddonEndDate" type="date" required size="lg" class="w-full" />
+          </UFormField>
+          <UButton type="submit" color="primary" block size="lg" :loading="grantingAddon" :disabled="!grantAddonPlanId || !grantAddonEndDate">
+            Regalar add-on
+          </UButton>
+        </form>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showExtendModal" title="Extender suscripción">
+      <template #body>
+        <p class="text-sm text-gray-500 mb-4">
+          Mueve la fecha de fin y de próximo cobro de la suscripción de
+          {{ extendFor ? profileName(extendFor.profile_id) : '' }} — no toca el método de pago.
+        </p>
+        <form class="space-y-4" @submit.prevent="handleExtend">
+          <UFormField label="Activa hasta" name="end_date">
+            <UInput v-model="extendEndDate" type="date" required size="lg" class="w-full" />
+          </UFormField>
+          <UButton type="submit" color="primary" block size="lg" :loading="extending" :disabled="!extendEndDate">
+            Extender
           </UButton>
         </form>
       </template>

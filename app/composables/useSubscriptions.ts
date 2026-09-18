@@ -32,5 +32,17 @@ export function useSubscriptions() {
     return (res as unknown as { data: Subscription }).data
   }
 
-  return { list, getByApplication, updateStatus, scheduleAmountChange, createAddon }
+  /** Cortesía: regala un add-on sin exigir tarjeta tokenizada en la base — solo uso admin (Zeus). */
+  async function grantAddon(profileId: string, baseSubscriptionId: string, body: { plan_id: string; created_by: string; end_date: string }): Promise<Subscription> {
+    const res = await post<Subscription>(`${base(profileId)}/${baseSubscriptionId}/grant-addon`, body)
+    return (res as unknown as { data: Subscription }).data
+  }
+
+  /** Cortesía: extiende end_date/next_billing_date de una suscripción activa, sin tocar el pago. */
+  async function extendGrant(profileId: string, subscriptionId: string, endDate: string): Promise<Subscription> {
+    const res = await patch<Subscription>(`${base(profileId)}/${subscriptionId}/extend`, { end_date: endDate })
+    return (res as unknown as { data: Subscription }).data
+  }
+
+  return { list, getByApplication, updateStatus, scheduleAmountChange, createAddon, grantAddon, extendGrant }
 }
