@@ -21,6 +21,7 @@ const ownerLinks = [
   { label: 'Aplicaciones', icon: 'i-heroicons-squares-2x2', slug: 'aplicaciones' },
   { label: 'Perfiles', icon: 'i-heroicons-user-group', slug: 'perfiles' },
   { label: 'Planes', icon: 'i-heroicons-tag', slug: 'planes' },
+  { label: 'Cupones', icon: 'i-heroicons-ticket', slug: 'cupones' },
   { label: 'Sitio web', icon: 'i-heroicons-globe-alt', slug: 'sitio' },
 ]
 // Documentos electrónicos y Contabilidad: mismo criterio que caja-registradora (secciones

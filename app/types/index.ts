@@ -40,6 +40,8 @@ export interface Profile {
   tax_id_type?: string | null
   phone?: string | null
   status?: string
+  /** Con qué cupón/código se creó este perfil, si vino de uno. */
+  coupon_id?: string | null
 }
 
 export interface ProfileForm {
@@ -597,4 +599,55 @@ export interface SiteLegalDocument {
   title: string
   lastUpdated: string
   html: string
+}
+
+// --- Cupones/referidos (collector/backend) ---
+
+export type CuponModalidad = 'pago_unico' | 'comision_permanente'
+export type CuponStatus = 'active' | 'inactive'
+
+export interface Coupon {
+  id: string
+  application_id: string
+  codigo: string
+  status: CuponStatus
+  vendedor_nombre: string
+  vendedor_telefono: string | null
+  vendedor_email: string | null
+  /** % de descuento para el que compra (0-100). */
+  descuento_porcentaje: number
+  /** Períodos de cobro con descuento (meses si el plan es mensual, años si es anual). null = siempre. */
+  descuento_num_periodos: number | null
+  modalidad: CuponModalidad
+  /** Solo con modalidad comision_permanente. */
+  comision_porcentaje: number | null
+  /** Centavos acumulados — lo que se le ha llegado a deber al vendedor en total. */
+  monto_generado: number
+  /** Centavos acumulados — lo que ya se le pagó. */
+  monto_pagado: number
+  created_at: string
+  updated_at: string | null
+}
+
+export interface CouponForm {
+  application_id: string
+  codigo: string
+  vendedor_nombre: string
+  vendedor_telefono?: string
+  vendedor_email?: string
+  descuento_porcentaje: number
+  descuento_num_periodos: number | null
+  modalidad: CuponModalidad
+  comision_porcentaje?: number | null
+  status?: CuponStatus
+}
+
+export interface CuponPago {
+  id: string
+  coupon_id: string
+  /** Centavos. */
+  monto: number
+  fecha: string
+  nota: string | null
+  created_at: string
 }
