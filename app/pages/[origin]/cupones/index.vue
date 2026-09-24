@@ -4,7 +4,7 @@ import type { Coupon, CouponForm, CuponModalidad, CuponPago, Profile } from '~/t
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
 const { origins } = useZeusContext()
-const { list, create, update, listPagos, registrarPago } = useCoupons()
+const { list, create, update, listPagos, registrarPago, eliminarPago } = useCoupons()
 const { list: listProfiles } = useProfiles()
 const toast = useToast()
 
@@ -190,6 +190,25 @@ async function handleRegistrarPago() {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
   } finally {
     registrando.value = false
+  }
+}
+
+const eliminandoPagoId = ref<string | null>(null)
+
+// No hay "editar" un pago — se borra (revierte lo sumado a monto_pagado) y se vuelve a
+// registrar con el monto correcto.
+async function handleEliminarPago(pago: CuponPago) {
+  if (!pagosDe.value) return
+  if (!confirm(`¿Eliminar el pago de ${centavos(pago.monto)} del ${pago.fecha}? Esto revierte el monto pagado.`)) return
+  eliminandoPagoId.value = pago.id
+  try {
+    await eliminarPago(pagosDe.value.id, pago.id)
+    toast.add({ title: 'Pago eliminado', color: 'success' })
+    await Promise.all([load(), openPagos(pagosDe.value)])
+  } catch (e: unknown) {
+    toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
+  } finally {
+    eliminandoPagoId.value = null
   }
 }
 </script>
@@ -382,7 +401,14 @@ async function handleRegistrarPago() {
                 <p class="text-gray-900">{{ p.fecha }}</p>
                 <p v-if="p.nota" class="text-xs text-gray-500">{{ p.nota }}</p>
               </div>
-              <p class="font-medium text-gray-900">{{ centavos(p.monto) }}</p>
+              <div class="flex items-center gap-2">
+                <p class="font-medium text-gray-900">{{ centavos(p.monto) }}</p>
+                <UButton
+                  size="xs" variant="ghost" color="error" icon="i-heroicons-trash"
+                  :loading="eliminandoPagoId === p.id"
+                  @click="handleEliminarPago(p)"
+                />
+              </div>
             </li>
           </ul>
           <p v-else class="text-sm text-gray-400 text-center py-4">Sin pagos registrados todavía.</p>

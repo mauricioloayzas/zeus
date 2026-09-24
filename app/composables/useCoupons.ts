@@ -5,7 +5,7 @@ import type { Coupon, CouponForm, CuponPago } from '~/types'
 // El backend los gatea con ProfileAccessMiddleware::checkThisOriginAdmin (Owner/Administrator
 // del origin), no con RBAC sobre un perfil.
 export function useCoupons() {
-  const { get, post, patch } = useApi('collector')
+  const { get, post, patch, del } = useApi('collector')
 
   async function list(applicationId: string): Promise<Coupon[]> {
     const res = await get<Coupon[]>('/coupons', { application_id: applicationId })
@@ -38,5 +38,11 @@ export function useCoupons() {
     return (res as unknown as { data: CuponPago }).data
   }
 
-  return { list, getOne, create, update, listPagos, registrarPago }
+  // Corrige un pago mal registrado: se borra y revierte lo sumado a monto_pagado. No hay
+  // "editar" — se borra y se vuelve a registrar con el monto correcto.
+  async function eliminarPago(couponId: string, pagoId: string): Promise<void> {
+    await del(`/coupons/${couponId}/pagos/${pagoId}`)
+  }
+
+  return { list, getOne, create, update, listPagos, registrarPago, eliminarPago }
 }
