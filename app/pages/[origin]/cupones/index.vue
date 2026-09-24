@@ -308,7 +308,7 @@ async function handleRegistrarPago() {
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Descuento al cliente (opcional)</p>
             <div class="grid grid-cols-2 gap-3 mb-3">
               <UFormField label="% de descuento">
-                <UInput v-model.number="form.descuento_porcentaje" type="number" min="0" max="100" size="lg" class="w-full" />
+                <UInput v-model.number="form.descuento_porcentaje" type="number" min="0" max="100" step="0.01" size="lg" class="w-full" />
               </UFormField>
               <UFormField label="Duración">
                 <USelectMenu
