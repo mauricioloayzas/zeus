@@ -3,9 +3,10 @@ import type { Coupon, CouponForm, CuponModalidad, CuponPago, Profile } from '~/t
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
-const { origins } = useZeusContext()
+const { origins, activeOrigin } = useZeusContext()
 const { list, create, update, listPagos, registrarPago, eliminarPago } = useCoupons()
 const { list: listProfiles } = useProfiles()
+const { getByApplication } = useSubscriptions()
 const toast = useToast()
 
 // Los cupones se listan por aplicación (GET /coupons requiere application_id) — a diferencia
@@ -18,6 +19,9 @@ const selectedApplicationId = ref('')
 const loading = ref(true)
 const cupones = ref<Coupon[]>([])
 const perfiles = ref<Profile[]>([])
+// Perfiles con una suscripción en la app seleccionada — sirve para el selector de "vincular a
+// un perfil existente" (ej. un contador), que solo tiene sentido con perfiles de esa misma app.
+const profileIdsDeLaApp = ref<Set<string>>(new Set())
 
 async function load() {
   if (!selectedApplicationId.value) {
@@ -27,12 +31,15 @@ async function load() {
   }
   loading.value = true
   try {
-    const [cuponesRes, perfilesRes] = await Promise.all([
+    const originId = activeOrigin.value?.profile.id
+    const [cuponesRes, perfilesRes, subsRes] = await Promise.all([
       list(selectedApplicationId.value),
       listProfiles(),
+      originId ? getByApplication(originId, selectedApplicationId.value) : Promise.resolve([]),
     ])
     cupones.value = cuponesRes
     perfiles.value = perfilesRes
+    profileIdsDeLaApp.value = new Set(subsRes.map((s) => s.profile_id))
   } catch (e: unknown) {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
   } finally {
@@ -49,12 +56,35 @@ function perfilesDelCupon(couponId: string): Profile[] {
   return perfiles.value.filter((p) => p.coupon_id === couponId)
 }
 
+const profileById = computed(() => new Map(perfiles.value.map((p) => [p.id, p])))
+function profileName(id: string | null | undefined): string | null {
+  if (!id) return null
+  return profileById.value.get(id)?.name ?? null
+}
+const profileOptions = computed(() => [
+  { label: 'Sin vincular (referido externo)', value: null },
+  ...perfiles.value
+    .filter((p) => profileIdsDeLaApp.value.has(p.id))
+    .map((p) => ({ label: p.name, value: p.id })),
+])
+
 function centavos(n: number) {
   return `$${(n / 100).toFixed(2)}`
 }
 function pendiente(c: Coupon) {
   return c.monto_generado - c.monto_pagado
 }
+
+// --- Resumen: cupones activos y perfiles creados por cada uno ---
+const cuponesActivos = computed(() => cupones.value.filter((c) => c.status === 'active'))
+const resumenChart = computed(() =>
+  cuponesActivos.value
+    .map((c) => ({ cupon: c, count: perfilesDelCupon(c.id).length }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+)
+const maxResumenCount = computed(() => Math.max(1, ...resumenChart.value.map((r) => r.count)))
+const totalPerfilesReferidos = computed(() => cupones.value.reduce((sum, c) => sum + perfilesDelCupon(c.id).length, 0))
 
 const modalidadOptions: { label: string; value: CuponModalidad }[] = [
   { label: 'Pago único (100% del primer mes)', value: 'pago_unico' },
@@ -79,6 +109,7 @@ const form = reactive<CouponForm>({
   vendedor_nombre: '',
   vendedor_telefono: '',
   vendedor_email: '',
+  profile_id: null,
   descuento_porcentaje: 0,
   descuento_num_periodos: null,
   modalidad: 'pago_unico',
@@ -93,6 +124,7 @@ function resetForm() {
   form.vendedor_nombre = ''
   form.vendedor_telefono = ''
   form.vendedor_email = ''
+  form.profile_id = null
   form.descuento_porcentaje = 0
   form.descuento_num_periodos = 3
   form.modalidad = 'pago_unico'
@@ -113,6 +145,7 @@ function openEdit(c: Coupon) {
   form.vendedor_nombre = c.vendedor_nombre
   form.vendedor_telefono = c.vendedor_telefono ?? ''
   form.vendedor_email = c.vendedor_email ?? ''
+  form.profile_id = c.profile_id ?? null
   form.descuento_porcentaje = c.descuento_porcentaje
   form.descuento_num_periodos = c.descuento_num_periodos
   form.modalidad = c.modalidad
@@ -243,7 +276,43 @@ async function handleEliminarPago(pago: CuponPago) {
       <p>Todavía no hay cupones creados</p>
     </div>
 
-    <div v-else class="border border-gray-200 rounded-xl overflow-hidden">
+    <template v-else>
+      <div class="border border-gray-200 rounded-xl p-5 mb-6">
+        <div class="flex items-center gap-6 mb-4">
+          <div>
+            <p class="text-xs text-gray-500">Cupones activos</p>
+            <p class="text-xl font-semibold text-gray-900 tabular-nums">{{ cuponesActivos.length }}</p>
+          </div>
+          <div class="border-l border-gray-100 pl-6">
+            <p class="text-xs text-gray-500">Perfiles creados por referido</p>
+            <p class="text-xl font-semibold text-gray-900 tabular-nums">{{ totalPerfilesReferidos }}</p>
+          </div>
+        </div>
+
+        <div v-if="resumenChart.length" class="space-y-2">
+          <button
+            v-for="r in resumenChart"
+            :key="r.cupon.id"
+            type="button"
+            class="w-full flex items-center gap-3 text-left group"
+            @click="openPagos(r.cupon)"
+          >
+            <span class="w-28 shrink-0 text-xs font-medium text-gray-700 truncate group-hover:text-gray-900">
+              {{ r.cupon.codigo }}
+            </span>
+            <span class="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+              <span
+                class="h-full bg-gray-900 group-hover:bg-gray-700 transition-colors rounded-full block"
+                :style="{ width: `${Math.max((r.count / maxResumenCount) * 100, r.count > 0 ? 4 : 0)}%` }"
+              />
+            </span>
+            <span class="w-6 shrink-0 text-xs text-gray-500 tabular-nums text-right">{{ r.count }}</span>
+          </button>
+        </div>
+        <p v-else class="text-xs text-gray-400">Todavía ningún perfil se creó con un cupón activo.</p>
+      </div>
+
+      <div class="border border-gray-200 rounded-xl overflow-hidden">
       <table class="w-full text-sm">
         <thead class="bg-gray-50 text-gray-500 text-left">
           <tr>
@@ -264,6 +333,10 @@ async function handleEliminarPago(pago: CuponPago) {
               <p class="font-medium text-gray-900">{{ c.codigo }}</p>
               <p class="text-xs text-gray-500">{{ c.vendedor_nombre }}</p>
               <p class="text-xs text-gray-400">{{ c.vendedor_telefono }} · {{ c.vendedor_email }}</p>
+              <p v-if="profileName(c.profile_id)" class="text-xs text-gray-400 mt-0.5">
+                <UIcon name="i-heroicons-link" class="inline -mt-0.5" />
+                Vinculado a {{ profileName(c.profile_id) }}
+              </p>
             </td>
             <td class="px-4 py-3 text-gray-600">{{ duracionLabel(c) }}</td>
             <td class="px-4 py-3 text-gray-600">
@@ -293,7 +366,8 @@ async function handleEliminarPago(pago: CuponPago) {
           </tr>
         </tbody>
       </table>
-    </div>
+      </div>
+    </template>
 
     <!-- Crear/editar -->
     <UModal v-model:open="showModal" :title="editing ? 'Editar cupón' : 'Nuevo cupón'">
@@ -320,6 +394,12 @@ async function handleEliminarPago(pago: CuponPago) {
                   <UInput v-model="form.vendedor_email" type="email" size="lg" class="w-full" />
                 </UFormField>
               </div>
+              <UFormField label="Vincular a un perfil existente (opcional)" name="profile_id">
+                <USelectMenu v-model="form.profile_id" :items="profileOptions" value-key="value" size="lg" class="w-full" />
+              </UFormField>
+              <p class="text-xs text-gray-400 -mt-2">
+                Solo si el vendedor ya tiene su propio perfil en esta app (ej. un contador) — igual de opcional que dejarlo vacío para un referido externo.
+              </p>
             </div>
           </div>
 

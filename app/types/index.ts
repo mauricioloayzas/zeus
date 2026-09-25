@@ -614,6 +614,8 @@ export interface Coupon {
   vendedor_nombre: string
   vendedor_telefono: string | null
   vendedor_email: string | null
+  /** Opcional: liga el cupón a un perfil que ya existe en la plataforma (ej. un contador). */
+  profile_id: string | null
   /** % de descuento para el que compra (0-100). */
   descuento_porcentaje: number
   /** Períodos de cobro con descuento (meses si el plan es mensual, años si es anual). null = siempre. */
@@ -635,6 +637,7 @@ export interface CouponForm {
   vendedor_nombre: string
   vendedor_telefono?: string
   vendedor_email?: string
+  profile_id?: string | null
   descuento_porcentaje: number
   descuento_num_periodos: number | null
   modalidad: CuponModalidad
