@@ -6,7 +6,6 @@ definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 const { origins, activeOrigin } = useZeusContext()
 const { list, create, update, listPagos, registrarPago, eliminarPago } = useCoupons()
 const { list: listProfiles } = useProfiles()
-const { getByApplication } = useSubscriptions()
 const toast = useToast()
 
 // Los cupones se listan por aplicación (GET /coupons requiere application_id) — a diferencia
@@ -19,9 +18,6 @@ const selectedApplicationId = ref('')
 const loading = ref(true)
 const cupones = ref<Coupon[]>([])
 const perfiles = ref<Profile[]>([])
-// Perfiles con una suscripción en la app seleccionada — sirve para el selector de "vincular a
-// un perfil existente" (ej. un contador), que solo tiene sentido con perfiles de esa misma app.
-const profileIdsDeLaApp = ref<Set<string>>(new Set())
 
 async function load() {
   if (!selectedApplicationId.value) {
@@ -31,15 +27,12 @@ async function load() {
   }
   loading.value = true
   try {
-    const originId = activeOrigin.value?.profile.id
-    const [cuponesRes, perfilesRes, subsRes] = await Promise.all([
+    const [cuponesRes, perfilesRes] = await Promise.all([
       list(selectedApplicationId.value),
       listProfiles(),
-      originId ? getByApplication(originId, selectedApplicationId.value) : Promise.resolve([]),
     ])
     cupones.value = cuponesRes
     perfiles.value = perfilesRes
-    profileIdsDeLaApp.value = new Set(subsRes.map((s) => s.profile_id))
   } catch (e: unknown) {
     toast.add({ title: 'Error', description: (e as Error).message, color: 'error' })
   } finally {
@@ -61,10 +54,26 @@ function profileName(id: string | null | undefined): string | null {
   if (!id) return null
   return profileById.value.get(id)?.name ?? null
 }
+
+// Profile no guarda a qué aplicación pertenece (ese vínculo vive en el RBAC/suscripción, no
+// en el perfil) y los contadores nunca tienen suscripción (son siempre gratis, ni pasan por
+// select-plan.vue) — así que filtrar por suscripción a la app los dejaba afuera del selector
+// siempre. Se usa el mismo criterio que perfiles/index.vue: pertenece a este origin por su
+// cadena de parent_id, sin importar la app.
+function belongsToOrigin(profile: Profile): boolean {
+  if (profile.id === activeOrigin.value?.profile.id) return false
+  const byId = profileById.value
+  let current: Profile | undefined = profile
+  for (let i = 0; i < 5 && current; i++) {
+    if (current.parent_id === activeOrigin.value?.profile.id) return true
+    current = current.parent_id ? byId.get(current.parent_id) : undefined
+  }
+  return false
+}
 const profileOptions = computed(() => [
   { label: 'Sin vincular (referido externo)', value: null },
   ...perfiles.value
-    .filter((p) => profileIdsDeLaApp.value.has(p.id))
+    .filter((p) => belongsToOrigin(p))
     .map((p) => ({ label: p.name, value: p.id })),
 ])
 
@@ -398,7 +407,7 @@ async function handleEliminarPago(pago: CuponPago) {
                 <USelectMenu v-model="form.profile_id" :items="profileOptions" value-key="value" size="lg" class="w-full" />
               </UFormField>
               <p class="text-xs text-gray-400 -mt-2">
-                Solo si el vendedor ya tiene su propio perfil en esta app (ej. un contador) — igual de opcional que dejarlo vacío para un referido externo.
+                Solo si el vendedor ya tiene su propio perfil en la plataforma (ej. un contador) — igual de opcional que dejarlo vacío para un referido externo. Si es un contador, el perfil nuevo que use este cupón quedará automáticamente como su hijo.
               </p>
             </div>
           </div>
