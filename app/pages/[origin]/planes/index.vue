@@ -146,7 +146,7 @@ async function handleSubmit() {
       toast.add({ title: 'Plan actualizado', color: 'success' })
     } else {
       if (!form.application_id) {
-        toast.add({ title: 'Elegí a qué aplicación pertenece el plan', color: 'error' })
+        toast.add({ title: 'Elige a qué aplicación pertenece el plan', color: 'error' })
         saving.value = false
         return
       }

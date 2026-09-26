@@ -435,7 +435,7 @@ async function handleEliminarPago(pago: CuponPago) {
 
           <div class="border-t border-gray-100 pt-3">
             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Comisión del vendedor</p>
-            <p class="text-xs text-gray-400 mb-2">Nunca las dos a la vez — elegí una.</p>
+            <p class="text-xs text-gray-400 mb-2">Nunca las dos a la vez — elige una.</p>
             <UFormField label="Modalidad">
               <USelectMenu v-model="form.modalidad" :items="modalidadOptions" value-key="value" size="lg" class="w-full" />
             </UFormField>

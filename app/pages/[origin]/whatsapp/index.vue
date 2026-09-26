@@ -230,7 +230,7 @@ function openCreate() {
 async function submitTemplate() {
   if (!profileId.value) return
   if (includeDocumentHeader.value && !headerDocumentBase64.value) {
-    toast.add({ title: 'Subí un archivo de ejemplo para el header de documento', color: 'error' })
+    toast.add({ title: 'Sube un archivo de ejemplo para el header de documento', color: 'error' })
     return
   }
   saving.value = true

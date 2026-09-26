@@ -384,7 +384,7 @@ async function descargarFlujoPdf() {
             v-model="selectedCuentaId"
             :items="cuentaOptions"
             value-key="value"
-            placeholder="Elegí una cuenta postable"
+            placeholder="Elige una cuenta postable"
             size="lg"
             class="w-full"
           />
