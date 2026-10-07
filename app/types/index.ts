@@ -447,7 +447,7 @@ export interface ReporteRetencionesResult {
 }
 
 export type EstadoDocumento = 'borrador' | 'generado' | 'firmado' | 'enviado' | 'autorizado' | 'rechazado' | 'anulado'
-export type TipoIdentificacion = '04' | '05' | '06' | '07' | '09'
+export type TipoIdentificacion = '04' | '05' | '06' | '07' | '08' | '09'
 export type EstadoProforma = 'activa' | 'convertida' | 'anulada'
 
 export interface Proforma {
