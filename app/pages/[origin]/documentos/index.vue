@@ -3,6 +3,8 @@ import type { Factura, Proforma, NotaCredito, NotaDebito, GuiaRemision, Comproba
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
+const route = useRoute()
+const router = useRouter()
 const { activeOrigin, applicationName } = useZeusContext()
 const { list: listFacturas } = useFacturas()
 const { list: listProformas } = useProformas()
@@ -27,8 +29,24 @@ const tabs: { key: TabKey, label: string, icon: string }[] = [
   { key: 'liquidaciones-compra', label: 'Liquidaciones de compra', icon: 'i-heroicons-shopping-cart' },
 ]
 
-const activeTab = ref<TabKey>('facturas')
+const validTabKeys = tabs.map(t => t.key)
+const initialTab = (route.query.tab as string) ?? ''
+const activeTab = ref<TabKey>((validTabKeys as string[]).includes(initialTab) ? initialTab as TabKey : 'facturas')
 const loading = ref(true)
+
+// Cada tab tiene su propio formulario de creación (ver [origin]/documentos/<tipo>/nueva.vue).
+const nuevaLinkByTab: Record<TabKey, string> = {
+  'facturas': 'facturas',
+  'proformas': 'proformas',
+  'notas-credito': 'notas-credito',
+  'notas-debito': 'notas-debito',
+  'guias-remision': 'guias-remision',
+  'retenciones': 'retenciones',
+  'liquidaciones-compra': 'liquidaciones-compra',
+}
+function crearNuevo() {
+  router.push(`/${(route.params.origin as string)}/documentos/${nuevaLinkByTab[activeTab.value]}/nueva`)
+}
 
 const facturas = ref<Factura[]>([])
 const proformas = ref<Proforma[]>([])
@@ -99,9 +117,12 @@ function secuencial(info: { estab: string, ptoEmi: string, secuencial?: string }
 
 <template>
   <div class="max-w-6xl mx-auto py-8 px-4">
-    <div class="mb-6">
-      <h1 class="text-xl font-semibold text-gray-900">Documentos electrónicos</h1>
-      <p class="text-sm text-gray-500">Comprobantes emitidos por {{ activeOrigin?.profile.name }}</p>
+    <div class="mb-6 flex items-center justify-between">
+      <div>
+        <h1 class="text-xl font-semibold text-gray-900">Documentos electrónicos</h1>
+        <p class="text-sm text-gray-500">Comprobantes emitidos por {{ activeOrigin?.profile.name }}</p>
+      </div>
+      <UButton color="neutral" icon="i-heroicons-plus" @click="crearNuevo">Nuevo</UButton>
     </div>
 
     <div class="mb-4 flex gap-1 overflow-x-auto border-b border-gray-200 pb-px">

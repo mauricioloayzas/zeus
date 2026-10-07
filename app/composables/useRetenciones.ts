@@ -1,12 +1,17 @@
-import type { ComprobanteRetencion } from '~/types'
+import type { ComprobanteRetencion, RetencionCreateForm } from '~/types'
 
 export function useRetenciones() {
-  const { get } = useApi('caja')
+  const { get, post } = useApi('caja')
 
   async function list(profileId: string): Promise<ComprobanteRetencion[]> {
     const res = await get<ComprobanteRetencion[]>(`/profiles/${profileId}/retenciones`)
     return (res as unknown as { data: ComprobanteRetencion[] }).data ?? []
   }
 
-  return { list }
+  async function create(profileId: string, data: RetencionCreateForm): Promise<ComprobanteRetencion> {
+    const res = await post<ComprobanteRetencion>(`/profiles/${profileId}/retenciones`, data)
+    return res.data
+  }
+
+  return { list, create }
 }

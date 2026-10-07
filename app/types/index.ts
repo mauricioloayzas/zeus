@@ -654,3 +654,275 @@ export interface CuponPago {
   nota: string | null
   created_at: string
 }
+
+// --- Creación de documentos electrónicos para el perfil origin (caja-registradora/backend) ---
+// Mismos tipos que caja-registradora/frontend/app/types/index.ts, portados tal cual — acá
+// solo se usan para los formularios de creación ([origin]/documentos/*/nueva.vue), nunca para
+// la vista de solo lectura de arriba (que usa sus propios tipos simplificados).
+
+export interface CajaHelperOption {
+  codigo: string
+  nombre: string
+}
+
+export type ClienteStatus = 'active' | 'inactive'
+
+export interface Cliente {
+  id: string
+  profile_id: string
+  tipo_identificacion: TipoIdentificacion
+  identificacion: string
+  razon_social: string
+  direccion?: string
+  email?: string
+  telefono?: string
+  status: ClienteStatus
+  created_at: string
+  updated_at: string | null
+}
+
+export interface ClienteForm {
+  tipo_identificacion: TipoIdentificacion
+  identificacion: string
+  razon_social: string
+  direccion?: string
+  email?: string
+  telefono?: string
+  status?: ClienteStatus
+}
+
+export type TipoAmbiente = '1' | '2'
+export type TipoEmisionSri = '1' | '2'
+export type CodigoPorcentajeIva = '0' | '5' | '2' | '3' | '4' | '6' | '7' | '8' | '10'
+export type FormaPago = '01' | '15' | '16' | '17' | '18' | '19' | '20' | '21'
+
+export interface ImpuestoDetalle {
+  codigo: CodigoImpuesto
+  codigoPorcentaje: CodigoPorcentajeIva
+  tarifa: number
+  baseImponible: number
+  valor: number
+}
+
+export interface DetalleFactura {
+  codigoPrincipal: string
+  codigoAuxiliar?: string | null
+  descripcion: string
+  cantidad: number
+  precioUnitario: number
+  descuento: number
+  precioTotalSinImpuesto: number
+  impuesto: ImpuestoDetalle
+  productoId?: string | null
+}
+
+export interface PagoFactura {
+  formaPago: FormaPago
+  total: number
+  plazo?: number | null
+  unidadTiempo?: string | null
+}
+
+export interface InfoTributaria {
+  ambiente: TipoAmbiente
+  tipoEmision: TipoEmisionSri
+  razonSocial: string
+  nombreComercial: string
+  ruc?: string
+  claveAcceso?: string | null
+  codDoc: string
+  estab: string
+  ptoEmi: string
+  secuencial?: string
+  dirMatriz: string
+  regimen: string
+}
+
+export interface InfoFactura {
+  fechaEmision: string
+  dirEstablecimiento: string
+  contribuyenteEspecial?: string | null
+  obligadoContabilidad: string
+  tipoIdentificacionComprador: string
+  razonSocialComprador: string
+  identificacionComprador: string
+  totalSinImpuestos: number
+  totalDescuento: number
+  totalImpuesto: ImpuestoDetalle[]
+  propina: number
+  importeTotal: number
+  moneda: string
+  pagos: PagoFactura
+}
+
+export interface FacturaCreateForm {
+  application_id: string
+  info_tributaria: Partial<InfoTributaria>
+  info_factura: InfoFactura
+  detalle: DetalleFactura[]
+  info_adicional?: Record<string, string>
+}
+
+export interface ProformaCreateForm {
+  application_id: string
+  fecha_emision: string
+  fecha_expiracion?: string | null
+  tipo_identificacion: TipoIdentificacion
+  identificacion: string
+  razon_social: string
+  email?: string | null
+  telefono?: string | null
+  cliente_id?: string | null
+  detalle: DetalleFactura[]
+  totalSinImpuestos: number
+  totalDescuento: number
+  totalImpuesto: ImpuestoDetalle[]
+  importeTotal: number
+  notas?: string | null
+}
+
+export interface InfoNotaCredito {
+  fechaEmision: string
+  dirEstablecimiento: string
+  contribuyenteEspecial?: string | null
+  obligadoContabilidad: string
+  tipoIdentificacionComprador: string
+  razonSocialComprador: string
+  identificacionComprador: string
+  codDocModificado: string
+  numDocModificado: string
+  fechaEmisionDocSustento: string
+  totalSinImpuestos: number
+  valorModificacion: number
+  moneda: string
+  totalConImpuestos: ImpuestoDetalle[]
+  motivo: string
+}
+
+export interface NotaCreditoCreateForm {
+  application_id: string
+  info_tributaria: Partial<InfoTributaria>
+  info_nota_credito: InfoNotaCredito
+  detalle: DetalleFactura[]
+  info_adicional?: Record<string, string>
+}
+
+export interface MotivoNotaDebito {
+  razon: string
+  valor: number
+}
+
+export interface InfoNotaDebito {
+  fechaEmision: string
+  dirEstablecimiento: string
+  contribuyenteEspecial?: string | null
+  obligadoContabilidad: string
+  tipoIdentificacionComprador: string
+  razonSocialComprador: string
+  identificacionComprador: string
+  codDocModificado: string
+  numDocModificado: string
+  fechaEmisionDocSustento: string
+  totalSinImpuestos: number
+  impuestos: ImpuestoDetalle[]
+  valorTotal: number
+  pagos: PagoFactura[]
+}
+
+export interface NotaDebitoCreateForm {
+  application_id: string
+  info_tributaria: Partial<InfoTributaria>
+  info_nota_debito: InfoNotaDebito
+  motivos: MotivoNotaDebito[]
+  info_adicional?: Record<string, string>
+}
+
+export interface DetalleGuiaRemision {
+  codigoInterno: string
+  descripcion: string
+  cantidad: number
+}
+
+export interface Destinatario {
+  identificacionDestinatario: string
+  razonSocialDestinatario: string
+  dirDestinatario: string
+  motivoTraslado: string
+  detalles: DetalleGuiaRemision[]
+}
+
+export interface InfoGuiaRemision {
+  dirEstablecimiento: string
+  dirPartida: string
+  razonSocialTransportista: string
+  tipoIdentificacionTransportista: string
+  rucTransportista: string
+  obligadoContabilidad: string
+  fechaIniTransporte: string
+  fechaFinTransporte: string
+  placa: string
+  contribuyenteEspecial?: string | null
+}
+
+export interface GuiaRemisionCreateForm {
+  application_id: string
+  info_tributaria: Partial<InfoTributaria>
+  info_guia_remision: InfoGuiaRemision
+  destinatarios: Destinatario[]
+  info_adicional?: Record<string, string>
+}
+
+export interface ImpuestoRetencion {
+  codigo: CodigoImpuesto
+  codigoRetencion: string
+  baseImponible: number
+  porcentajeRetener: number
+  valorRetenido: number
+  codDocSustento: string
+  numDocSustento: string
+  fechaEmisionDocSustento: string
+  descripcion?: string | null
+}
+
+export interface InfoCompRetencion {
+  fechaEmision: string
+  dirEstablecimiento: string
+  obligadoContabilidad: string
+  tipoIdentificacionSujetoRetenido: string
+  razonSocialSujetoRetenido: string
+  identificacionSujetoRetenido: string
+  periodoFiscal: string
+}
+
+export interface RetencionCreateForm {
+  application_id: string
+  info_tributaria: Partial<InfoTributaria>
+  info_comp_retencion: InfoCompRetencion
+  impuestos: ImpuestoRetencion[]
+  info_adicional?: Record<string, string>
+}
+
+export interface InfoLiquidacionCompra {
+  fechaEmision: string
+  dirEstablecimiento: string
+  contribuyenteEspecial?: string | null
+  obligadoContabilidad: string
+  tipoIdentificacionProveedor: string
+  razonSocialProveedor: string
+  identificacionProveedor: string
+  direccionProveedor: string
+  totalSinImpuestos: number
+  totalDescuento: number
+  totalConImpuestos: ImpuestoDetalle[]
+  importeTotal: number
+  moneda: string
+  pagos: PagoFactura
+}
+
+export interface LiquidacionCompraCreateForm {
+  application_id: string
+  info_tributaria: Partial<InfoTributaria>
+  info_liquidacion_compra: InfoLiquidacionCompra
+  detalle: DetalleFactura[]
+  info_adicional?: Record<string, string>
+}
