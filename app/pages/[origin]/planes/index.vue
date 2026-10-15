@@ -13,7 +13,7 @@ const toast = useToast()
 // layouts/admin.vue y escaneando prod_collector_plan_details). Se ofrece como acceso rápido,
 // pero igual se puede escribir cualquier otra clave a mano.
 const KNOWN_FEATURES = [
-  'dashboard', 'modulos_verticales', 'links_de_pago', 'envio_whatsapp', 'envio_email',
+  'dashboard', 'modulos_verticales', 'links_de_pago', 'envio_whatsapp', 'envio_telegram', 'envio_email',
   'facturacion_web', 'facturacion_movil', 'firma_digital', 'facturacion_recurrente_automatizada',
   'reportes_basicos_ventas', 'reportes', 'reportes_financieros', 'inventario',
   'agendamiento_publico', 'gestion_casos_anticipos_hitos', 'equipo_staff', 'multiusuario',

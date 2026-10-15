@@ -320,6 +320,18 @@ export interface WhatsAppAccount {
   is_coexistence: boolean
 }
 
+export type TelegramAccountStatus = 'connected' | 'disconnected'
+
+export interface TelegramAccount {
+  id: string
+  profile_id: string
+  bot_id: string
+  bot_username: string
+  status: TelegramAccountStatus
+  connected_at: string
+  updated_at: string | null
+}
+
 export interface WhatsAppTemplate {
   id: string
   profile_id: string

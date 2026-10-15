@@ -38,6 +38,7 @@ const sharedLinks = [
 const ownerOnlyExtra = [
   { label: 'Configuración', icon: 'i-heroicons-cog-6-tooth', slug: 'configuracion' },
   { label: 'WhatsApp', icon: 'i-heroicons-chat-bubble-left-right', slug: 'whatsapp' },
+  { label: 'Telegram', icon: 'i-heroicons-paper-airplane', slug: 'telegram' },
 ]
 
 const navLinks = computed(() => {
