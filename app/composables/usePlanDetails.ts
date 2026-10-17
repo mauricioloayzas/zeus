@@ -18,7 +18,7 @@ export function usePlanDetails() {
     return (res as unknown as { data: PlanDetail }).data
   }
 
-  async function update(planId: string, planDetailId: string, data: { features: string[] }): Promise<PlanDetail> {
+  async function update(planId: string, planDetailId: string, data: { features: string[], limits?: PlanDetailLimits }): Promise<PlanDetail> {
     const res = await put<PlanDetail>(`/plans/${planId}/plan-details/${planDetailId}`, data)
     return (res as unknown as { data: PlanDetail }).data
   }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Plan, PlanDetail } from '~/types'
+import type { Plan, PlanDetail, PlanDetailLimits } from '~/types'
 
 definePageMeta({ layout: 'admin', middleware: ['auth', 'origin'] })
 
@@ -82,6 +82,38 @@ function removeFeature(key: string) {
   features.value = features.value.filter((f) => f !== key)
 }
 
+// --- Límites de mensajería del plan (misma plan-detail, clave limits.*_messages_per_month) ---
+// 'disabled' = la clave no existe en el mapa -> el canal no envía nada (fail-closed en el
+// notifier); 'unlimited' = clave presente con valor null; 'limited' = clave con un número.
+type LimitMode = 'disabled' | 'unlimited' | 'limited'
+const limitModeOptions: { label: string, value: LimitMode }[] = [
+  { label: 'Deshabilitado', value: 'disabled' },
+  { label: 'Sin límite', value: 'unlimited' },
+  { label: 'Límite mensual', value: 'limited' },
+]
+const otherLimits = ref<PlanDetailLimits>({})
+const whatsappLimitMode = ref<LimitMode>('disabled')
+const whatsappLimitValue = ref(1000)
+const telegramLimitMode = ref<LimitMode>('disabled')
+const telegramLimitValue = ref(1000)
+
+function limitModeFromLimits(limits: PlanDetailLimits, key: string): { mode: LimitMode, value: number } {
+  if (!(key in limits)) return { mode: 'disabled', value: 1000 }
+  if (limits[key] === null || limits[key] === undefined) return { mode: 'unlimited', value: 1000 }
+  return { mode: 'limited', value: Number(limits[key]) }
+}
+
+function buildLimits(): PlanDetailLimits {
+  const limits = { ...otherLimits.value }
+  if (whatsappLimitMode.value !== 'disabled') {
+    limits.whatsapp_messages_per_month = whatsappLimitMode.value === 'unlimited' ? null : whatsappLimitValue.value
+  }
+  if (telegramLimitMode.value !== 'disabled') {
+    limits.telegram_messages_per_month = telegramLimitMode.value === 'unlimited' ? null : telegramLimitValue.value
+  }
+  return limits
+}
+
 function resetForm() {
   form.name = ''
   form.description = ''
@@ -92,6 +124,11 @@ function resetForm() {
   existingPlanDetail.value = null
   features.value = []
   newFeatureInput.value = ''
+  otherLimits.value = {}
+  whatsappLimitMode.value = 'disabled'
+  whatsappLimitValue.value = 1000
+  telegramLimitMode.value = 'disabled'
+  telegramLimitValue.value = 1000
 }
 
 function openCreate() {
@@ -110,6 +147,11 @@ async function openEdit(p: Plan) {
   existingPlanDetail.value = null
   features.value = []
   newFeatureInput.value = ''
+  otherLimits.value = {}
+  whatsappLimitMode.value = 'disabled'
+  whatsappLimitValue.value = 1000
+  telegramLimitMode.value = 'disabled'
+  telegramLimitValue.value = 1000
   showModal.value = true
 
   loadingFeatures.value = true
@@ -117,6 +159,19 @@ async function openEdit(p: Plan) {
     const detail = await getByPlanId(p.id)
     existingPlanDetail.value = detail
     features.value = detail?.features ? [...detail.features] : []
+
+    const limits = detail?.limits ?? {}
+    otherLimits.value = { ...limits }
+    delete otherLimits.value.whatsapp_messages_per_month
+    delete otherLimits.value.telegram_messages_per_month
+
+    const whatsapp = limitModeFromLimits(limits, 'whatsapp_messages_per_month')
+    whatsappLimitMode.value = whatsapp.mode
+    whatsappLimitValue.value = whatsapp.value
+
+    const telegram = limitModeFromLimits(limits, 'telegram_messages_per_month')
+    telegramLimitMode.value = telegram.mode
+    telegramLimitValue.value = telegram.value
   } catch (e: unknown) {
     toast.add({ title: 'Error cargando las features del plan', description: (e as Error).message, color: 'error' })
   } finally {
@@ -125,10 +180,11 @@ async function openEdit(p: Plan) {
 }
 
 async function syncFeatures(planId: string, applicationId: string) {
+  const limits = buildLimits()
   if (existingPlanDetail.value) {
-    await updatePlanDetail(planId, existingPlanDetail.value.id, { features: features.value })
-  } else if (features.value.length) {
-    await createPlanDetail(planId, { application_id: applicationId, features: features.value })
+    await updatePlanDetail(planId, existingPlanDetail.value.id, { features: features.value, limits })
+  } else if (features.value.length || Object.keys(limits).length) {
+    await createPlanDetail(planId, { application_id: applicationId, features: features.value, limits })
   }
 }
 
@@ -308,6 +364,40 @@ async function toggleStatus(p: Plan) {
                 </button>
               </div>
             </template>
+          </UFormField>
+
+          <UFormField label="Límites de mensajería" name="limits" help="Cuota mensual de avisos salientes por canal. 'Deshabilitado' bloquea ese canal por completo para este plan.">
+            <div v-if="loadingFeatures" class="flex justify-center py-4">
+              <UIcon name="i-heroicons-arrow-path" class="animate-spin text-xl text-gray-400" />
+            </div>
+            <div v-else class="space-y-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-20 shrink-0">WhatsApp</span>
+                <USelectMenu v-model="whatsappLimitMode" :items="limitModeOptions" value-key="value" size="sm" class="w-40" />
+                <UInput
+                  v-if="whatsappLimitMode === 'limited'"
+                  v-model.number="whatsappLimitValue"
+                  type="number"
+                  min="0"
+                  size="sm"
+                  class="w-28"
+                  placeholder="mensajes/mes"
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-500 w-20 shrink-0">Telegram</span>
+                <USelectMenu v-model="telegramLimitMode" :items="limitModeOptions" value-key="value" size="sm" class="w-40" />
+                <UInput
+                  v-if="telegramLimitMode === 'limited'"
+                  v-model.number="telegramLimitValue"
+                  type="number"
+                  min="0"
+                  size="sm"
+                  class="w-28"
+                  placeholder="mensajes/mes"
+                />
+              </div>
+            </div>
           </UFormField>
 
           <UButton type="submit" color="primary" block size="lg" :loading="saving">
